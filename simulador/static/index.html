@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore o ProtoSGC episódio por episódio, com os tensores e as atualizações reais do PyTorch.">
+  <title>ProtoSGC · Laboratório de episódios</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true">∑</span><div><span class="eyebrow">LABORATÓRIO / FEW-SHOT</span><h1>Por dentro de um episódio</h1></div></div>
+  <span class="runtime"><span aria-hidden="true"></span> ProtoSGC real · CPU</span>
+</header>
+<div class="workspace">
+  <aside class="sidebar">
+    <form id="configuration">
+      <div class="section-title"><h2>Experimento</h2><span class="eyebrow">01 / CONFIGURAR</span></div>
+      <label>Modelo<select name="model_name"><option value="proto-sgc">Proto-SGC</option><option value="protonet">ProtoNet · sem grafo</option></select></label>
+      <label>Topologia<select name="graph_type"><option>knn-union</option><option>knn-out</option><option>knn-in</option><option>knn-reciprocal</option><option>dgcg</option><option>dgcg-plus</option></select></label>
+      <div class="pair"><label>Vizinhos k<input name="knn" type="number" min="1" max="12" value="3" required></label><label>Saltos SGC<input name="sgc_hops" type="number" min="1" max="5" value="2" required></label></div>
+      <label>Normalização<select name="grande_metric"><option value="off">Graus usuais</option><option value="euclidean">GRaNDe · Euclidiana</option><option value="cosine">GRaNDe · cosseno</option><option value="rbo">GRaNDe · RBO</option></select></label>
+      <label class="checkbox"><input name="cosine_rbf_weight" type="checkbox"> Ablação: ponderar arestas com RBF</label>
+      <details id="graph-options"><summary>Opções de grafo</summary>
+        <label>σ do RBF opcional<input name="graph_temperature" type="number" min="0.05" max="2" step="0.05" value="0.5" required></label>
+        <label>σ GRaNDe<input name="grande_sigma" type="number" min="0.05" max="2" step="0.05" value="0.2" required></label>
+        <label>Métrica dos rankings<select name="dgcg_metric"><option value="euclidean">Euclidiana · padrão</option><option value="cosine">Cosseno</option></select></label>
+        <label>Correlação DGCG<select name="dgcg_correlation"><option>rbo</option><option>jaccardk</option><option>jaccard-median</option><option>jaccard-max</option></select></label>
+        <div class="pair"><label>Top-k do ranking<input name="dgcg_top_k" type="number" min="1" max="40" value="10" required></label><label>p RBO · GRaNDe<input name="grande_rbo_p" type="number" min="0.1" max="0.99" step="0.01" value="0.9" required></label></div>
+        <label>Limiar DGCG<input name="dgcg_threshold" type="number" min="0" max="1" step="0.01" placeholder="Automático · grau 4–6"></label>
+      </details>
+      <div class="divider"></div>
+      <h3>Episódios e otimização</h3>
+      <div class="triple"><label>N-way<input name="n_way" type="number" min="2" max="5" value="3" required></label><label>N-shot<input name="n_shot" type="number" min="1" max="3" value="2" required></label><label>Consultas/classe<input name="n_query" type="number" min="1" max="5" value="3" required></label></div>
+      <div class="pair"><label>Passos de treino<input name="steps" type="number" min="1" max="120" value="40" required></label><label>Learning rate<input name="learning_rate" type="number" min="0.0001" max="0.1" step="0.0001" value="0.01" required></label></div>
+      <label>Dispersão dos embeddings <output id="noise-value">0,65</output><input name="noise" type="range" min="0.05" max="1.5" step="0.05" value="0.65"></label>
+      <details><summary>Mais parâmetros</summary>
+        <div class="pair"><label>Dimensão de saída<input name="output_dim" type="number" min="3" max="12" value="4" required></label><label>Semente<input name="seed" type="number" min="0" max="100000" value="7" required></label></div>
+        <div class="pair"><label>Weight decay<input name="weight_decay" type="number" min="0" max="0.1" step="0.0001" value="0.0001" required></label><label>Clipping (norma)<input name="grad_clip" type="number" min="0.01" max="20" step="0.01" value="5" required></label></div>
+      </details>
+      <button id="run" class="primary" type="submit">Executar experimento <span aria-hidden="true">↗</span></button>
+      <p id="status" role="status" aria-live="polite">Preparando a primeira simulação…</p>
+      <p id="error" role="alert" hidden></p>
+    </form>
+    <div class="source-note"><span class="eyebrow">ORIGEM DOS VETORES</span><p id="source-description">Embeddings sintéticos fixos, com 8 dimensões. Substituem a ResNet congelada; o modelo, os grafos e o AdamW são os do projeto.</p></div>
+  </aside>
+
+  <main>
+    <section class="timeline" aria-label="Navegação pelo treino">
+      <div class="timeline-heading"><div><span class="eyebrow">02 / PERCORRER O TREINO</span><h2>Passo <strong id="step-number">—</strong><span id="step-total"> / —</span></h2></div><div class="transport"><button id="previous" type="button" title="Passo anterior" aria-label="Passo anterior" disabled>←</button><button id="play" type="button" disabled>▶ Reproduzir</button><button id="next" type="button" title="Próximo passo" aria-label="Próximo passo" disabled>→</button></div></div>
+      <input id="step-slider" aria-label="Passo de treino" type="range" min="1" max="40" value="1" disabled>
+      <div class="timeline-foot"><span>1 passo = 1 episódio + 1 atualização de pesos</span><span id="checkpoint-label">Validação a cada 5 passos</span></div>
+    </section>
+    <nav class="tabs" role="tablist" aria-label="Modo de exploração"><button type="button" role="tab" id="tab-simulation" aria-controls="simulation-panel" aria-selected="true">Simulação</button><button type="button" role="tab" id="tab-math" aria-controls="math-panel" aria-selected="false">Matemática do passo</button></nav>
+
+    <section id="simulation-panel" role="tabpanel" aria-labelledby="tab-simulation">
+      <div class="view-controls"><label>Observar<select id="episode-view"><option value="train">Episódio do treino</option><option value="probe">Episódio de referência fixo</option></select></label><div class="segmented" aria-label="Estado dos parâmetros"><button type="button" id="state-before" aria-pressed="true">Antes da atualização</button><button type="button" id="state-after" aria-pressed="false">Depois da atualização</button></div></div>
+      <p class="view-hint" id="view-hint">Cada passo amostra outras imagens. Compare antes/depois para isolar o efeito dos pesos.</p>
+      <div class="stage-nav" id="stage-nav" aria-label="Etapa do modelo"></div>
+      <div class="inspection">
+        <div class="visual-heading"><div><span class="eyebrow" id="stage-code">ProtoSGC.forward</span><h2 id="stage-title">Embeddings do episódio</h2></div><label id="hop-control" hidden>Salto <output id="hop-value">0</output><input id="hop-slider" type="range" min="0" max="2" value="0" aria-label="Salto da propagação"></label></div>
+        <div id="plot" class="plot" aria-label="Visualização da etapa selecionada"><div class="empty">Executando o modelo para carregar os tensores…</div></div>
+        <div id="legend" class="legend"></div>
+        <p id="projection-note" class="muted"></p>
+        <div id="selected-node" class="selected-node" aria-live="polite">Selecione um nó para acompanhar suas informações.</div>
+        <p id="stage-explanation" class="stage-explanation"></p>
+      </div>
+      <details id="stage-source" class="source-panel" open>
+        <summary>Código que faz esta etapa</summary>
+        <label class="source-picker">Trecho relacionado<select id="source-selector" aria-label="Trecho de código da etapa"></select></label>
+        <div id="source-content"><p class="muted">Carregando os trechos do projeto…</p></div>
+      </details>
+      <div class="metrics"><div><span>Loss · episódio observado</span><strong id="metric-loss">—</strong></div><div><span>Acurácia · consultas</span><strong id="metric-accuracy">—</strong></div><div><span>Norma da atualização de Θ</span><strong id="metric-update">—</strong></div></div>
+      <section class="learning"><div class="visual-heading"><h3>Evolução do treino</h3><span class="muted">Clique na curva para selecionar um passo</span></div><div id="curve" class="curve"></div><div class="legend"><span><i class="swatch train"></i>Loss do episódio amostrado · antes</span><span><i class="swatch probe"></i>Loss da referência fixa · depois</span></div><p class="muted">A referência usa sempre os mesmos exemplos de treino. Oscilações na outra curva também refletem a troca do episódio.</p></section>
+      <details class="tensor-panel"><summary>Tensores da etapa selecionada</summary><div id="tensor-content"></div></details>
+      <section class="evaluation"><h3>Validação e teste em outras classes</h3><div id="evaluation-content"></div></section>
+    </section>
+
+    <section id="math-panel" role="tabpanel" aria-labelledby="tab-math" hidden><div id="math-content"></div></section>
+  </main>
+</div>
+<footer>O eixo de treino é episódico: não há uma passagem completa pelo dataset em cada passo. As consultas participam do grafo; seus rótulos entram somente na loss e na avaliação.</footer>
+</body>
+</html>
