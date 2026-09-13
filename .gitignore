@@ -2,3 +2,5 @@
 .codex/
 proto_sgc/__pycache__/
 venv/
+data/
+runs/
