@@ -21,6 +21,9 @@ class Episode:
     support_y: torch.Tensor
     query_x: torch.Tensor
     query_y: torch.Tensor
+    # Identidade de cada exemplo: (classe original, linha no tensor da classe).
+    # Ordem identica a cat((support_x, query_x)); nao sao rotulos para o modelo.
+    sample_ids: tuple[tuple[str, int], ...] = ()
 
 
 def split_classes(
@@ -108,6 +111,8 @@ class FeatureEpisodeSampler:
         query_x: list[torch.Tensor] = []
         support_y: list[int] = []
         query_y: list[int] = []
+        support_ids: list[tuple[str, int]] = []
+        query_ids: list[tuple[str, int]] = []
 
         for episodic_label, class_name in enumerate(selected):
             class_features = self.features_by_class[str(class_name)]
@@ -124,6 +129,8 @@ class FeatureEpisodeSampler:
             query_x.append(class_features[query_indices])
             support_y.extend([episodic_label] * self.n_shot)
             query_y.extend([episodic_label] * self.n_query)
+            support_ids.extend((str(class_name), int(i)) for i in indices[: self.n_shot])
+            query_ids.extend((str(class_name), int(i)) for i in indices[self.n_shot :])
 
         # A concatenacao coloca os exemplos classe a classe. O modelo nao
         # depende dessa ordem, pois seleciona o suporte por seu rotulo local.
@@ -132,6 +139,7 @@ class FeatureEpisodeSampler:
             support_y=torch.tensor(support_y, dtype=torch.long),
             query_x=torch.cat(query_x, dim=0),
             query_y=torch.tensor(query_y, dtype=torch.long),
+            sample_ids=tuple(support_ids + query_ids),
         )
 
 
@@ -143,4 +151,5 @@ def episode_to_device(episode: Episode, device: torch.device) -> Episode:
         support_y=episode.support_y.to(device),
         query_x=episode.query_x.to(device),
         query_y=episode.query_y.to(device),
+        sample_ids=episode.sample_ids,
     )

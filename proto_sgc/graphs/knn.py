@@ -1,4 +1,4 @@
-"""Topologias kNN euclidianas e ponderação RBF opcional.
+"""Topologias kNN euclidianas ou por cosseno e ponderação RBF opcional.
 
 A função RBF também pode ponderar DGCG e DGCG+, preservando suas arestas.
 """
@@ -15,8 +15,9 @@ def knn_adjacency(
     *,
     knn: int,
     graph_type: str,
+    metric: str = "euclidean",
 ) -> torch.Tensor:
-    """Constroi uma adjacencia kNN euclidiana, binaria e sem autolacos.
+    """Constroi uma adjacencia kNN binaria e sem autolacos.
 
     A convencao e ``A_out[i, j] > 0`` quando ``j`` pertence ao kNN de
     ``i`` (aresta ``i -> j``). Portanto, em ``A @ X``, ``knn-out`` faz o
@@ -24,12 +25,18 @@ def knn_adjacency(
     nos que escolheram ``i``. ``torch.cdist(..., p=2)`` produz a mesma
     distancia Euclidiana do ``BallTree`` original (Minkowski com ``p=2``).
     """
+    if metric not in ("euclidean", "cosine"):
+        raise ValueError("Metrica kNN deve ser euclidean ou cosine.")
     n_nodes = features.shape[0]
     if n_nodes < 2:
         raise ValueError("O episodio precisa ter ao menos dois nos.")
     k = min(knn, n_nodes - 1)
 
-    distances = torch.cdist(features, features, p=2)
+    if metric == "cosine":
+        unit_features = F.normalize(features, p=2, dim=1)
+        distances = 1.0 - unit_features @ unit_features.T
+    else:
+        distances = torch.cdist(features, features, p=2)
     diagonal = torch.eye(n_nodes, dtype=torch.bool, device=features.device)
     neighbors = distances.masked_fill(diagonal, torch.inf).topk(
         k=k, dim=1, largest=False

@@ -75,6 +75,7 @@ function enabledFields() {
   }
   for (const name of ["graph_type", "sgc_hops", "grande_metric", "cosine_rbf_weight", "graph_temperature"]) form.elements[name].disabled = baseline;
   form.elements.knn.disabled = baseline || dgcg;
+  form.elements.knn_metric.disabled = baseline || dgcg;
   form.elements.grande_sigma.disabled = baseline || form.elements.grande_metric.value === "off";
   form.elements.grande_rbo_p.disabled = baseline || form.elements.grande_metric.value !== "rbo";
   for (const name of ["dgcg_metric", "dgcg_top_k"]) form.elements[name].disabled = baseline || (!dgcg && form.elements.grande_metric.value !== "rbo");
@@ -466,8 +467,8 @@ function renderMath() {
     graphEquation="Sem construção de A. A propagação é omitida: U = XΘ.";
     graphText="O baseline ignora a construção do grafo e projeta cada vetor independentemente.";
   } else if(c.graph_type.startsWith("knn")) {
-    graphEquation=`dᵢⱼ = ‖xᵢ−xⱼ‖₂<br>Bᵢⱼ = 𝟙[j está entre os k menores dᵢⱼ, j ≠ i]<br>A = ${c.graph_type==="knn-in"?"Bᵀ":c.graph_type==="knn-union"?"max(B,Bᵀ)":c.graph_type==="knn-reciprocal"?"min(B,Bᵀ)":"B"}<br>k efetivo = ${Math.min(c.knn,n-1)}; arestas padrão ∈ {0,1}`;
-    graphText="Os vizinhos vêm da distância Euclidiana em X, como no BallTree original. A diagonal é excluída nessa etapa e as arestas valem 1. Cada linha i de A informa quais nós j fornecem suas representações para i em A @ X.";
+    graphEquation=`dᵢⱼ = ${c.knn_metric==="cosine"?"1 − cos(xᵢ,xⱼ)":"‖xᵢ−xⱼ‖₂"}<br>Bᵢⱼ = 𝟙[j está entre os k menores dᵢⱼ, j ≠ i]<br>A = ${c.graph_type==="knn-in"?"Bᵀ":c.graph_type==="knn-union"?"max(B,Bᵀ)":c.graph_type==="knn-reciprocal"?"min(B,Bᵀ)":"B"}<br>k efetivo = ${Math.min(c.knn,n-1)}; arestas padrão ∈ {0,1}`;
+    graphText=`Os vizinhos vêm da distância ${c.knn_metric==="cosine"?"cosseno":"Euclidiana"} em X. A diagonal é excluída nessa etapa e as arestas valem 1. Cada linha i de A informa quais nós j fornecem suas representações para i em A @ X.`;
   } else {
     graphText=`As listas ranqueadas por ${c.dgcg_metric==="cosine"?"cosseno":"distância Euclidiana"} incluem o próprio nó em primeiro lugar. A correlação é ${esc(c.dgcg_correlation)}; o próprio nó é retirado dos candidatos a aresta. ${c.dgcg_threshold===null?"O limiar automático procura o grau médio mais próximo do intervalo [4,6], limitado ao número de candidatos, preserva empates e acrescenta o melhor candidato de um nó que ficaria isolado.":`O limiar manual aceita somente correlações estritamente maiores que ${num(c.dgcg_threshold,2)}; não aplica o fallback para nós isolados.`}`;
     graphEquation=c.dgcg_correlation==="rbo"?`corr(i,j) = (1−p) Σ<sub>d=1</sub><sup>k</sup> p<sup>d−1</sup> |Rᵢ[:d] ∩ Rⱼ[:d]| / d<br>p = 0,9; k efetivo = ${Math.min(c.dgcg_top_k,n)}`:`J<sub>d</sub>(i,j) = |Rᵢ[:d] ∩ Rⱼ[:d]| / (2d − |Rᵢ[:d] ∩ Rⱼ[:d]|)<br>corr(i,j) = ${c.dgcg_correlation==="jaccardk"?"média":c.dgcg_correlation==="jaccard-max"?"máximo":"mediana"}<sub>d=1…k</sub> J<sub>d</sub>(i,j)`;

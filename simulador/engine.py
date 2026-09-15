@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from proto_sgc.config import DGCG_CORRELATIONS, DGCG_METRICS, GRAPH_TYPES
+from proto_sgc.config import DGCG_CORRELATIONS, DGCG_METRICS, GRAPH_TYPES, KNN_METRICS
 from proto_sgc.episodes import Episode, FeatureEpisodeSampler, split_classes
 from proto_sgc.model import ProtoSGC
 from proto_sgc.runtime import _safe_torch_load
@@ -37,6 +37,7 @@ class SimulationConfig:
     weight_decay: float = 0.0001
     grad_clip: float = 5.0
     knn: int = 3
+    knn_metric: str = "euclidean"
     sgc_hops: int = 2
     output_dim: int = 4
     graph_temperature: float = 0.5
@@ -62,6 +63,7 @@ FLOAT_LIMITS = {
     "noise": (0.05, 1.5),
 }
 CHOICES = {
+    "knn_metric": KNN_METRICS,
     "model_name": ("proto-sgc", "protonet"), "graph_type": GRAPH_TYPES,
     "grande_metric": ("off", "euclidean", "cosine", "rbo"),
     "dgcg_metric": DGCG_METRICS, "dgcg_correlation": DGCG_CORRELATIONS,
@@ -156,7 +158,7 @@ class ObservedProtoSGC(ProtoSGC):
 def model_arguments(cfg: SimulationConfig, input_dim: int) -> dict:
     return dict(
         input_dim=input_dim, output_dim=cfg.output_dim, model_name=cfg.model_name,
-        knn=cfg.knn, graph_type=cfg.graph_type, sgc_hops=cfg.sgc_hops,
+        knn=cfg.knn, knn_metric=cfg.knn_metric, graph_type=cfg.graph_type, sgc_hops=cfg.sgc_hops,
         graph_temperature=cfg.graph_temperature, grande=cfg.grande_metric != "off",
         grande_metric="euclidean" if cfg.grande_metric == "off" else cfg.grande_metric,
         grande_sigma=cfg.grande_sigma, grande_rbo_p=cfg.grande_rbo_p,

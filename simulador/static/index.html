@@ -21,6 +21,7 @@
       <label>Modelo<select name="model_name"><option value="proto-sgc">Proto-SGC</option><option value="protonet">ProtoNet · sem grafo</option></select></label>
       <label>Topologia<select name="graph_type"><option>knn-union</option><option>knn-out</option><option>knn-in</option><option>knn-reciprocal</option><option>dgcg</option><option>dgcg-plus</option></select></label>
       <div class="pair"><label>Vizinhos k<input name="knn" type="number" min="1" max="12" value="3" required></label><label>Saltos SGC<input name="sgc_hops" type="number" min="1" max="5" value="2" required></label></div>
+      <label>Métrica dos vizinhos kNN<select name="knn_metric"><option value="euclidean">Euclidiana · padrão</option><option value="cosine">Cosseno</option></select></label>
       <label>Normalização<select name="grande_metric"><option value="off">Graus usuais</option><option value="euclidean">GRaNDe · Euclidiana</option><option value="cosine">GRaNDe · cosseno</option><option value="rbo">GRaNDe · RBO</option></select></label>
       <label class="checkbox"><input name="cosine_rbf_weight" type="checkbox"> Ablação: ponderar arestas com RBF</label>
       <details id="graph-options"><summary>Opções de grafo</summary>

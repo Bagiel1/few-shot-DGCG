@@ -19,7 +19,7 @@ few_shot/
 │   ├── model.py             # ProtoSGC: projeção, propagação e protótipos
 │   ├── graphs/
 │   │   ├── __init__.py      # Identifica o subpacote de algoritmos de grafo
-│   │   ├── knn.py           # kNN euclidiano binário e RBF opcional
+│   │   ├── knn.py           # kNN euclidiano/cosseno binário e RBF opcional
 │   │   ├── dgcg.py          # Rankings, correlações, DGCG e DGCG+
 │   │   └── grande.py        # Distâncias e cálculo do grau GRaNDe
 │   ├── training.py          # Treino, avaliação, métricas e checkpoints
@@ -133,7 +133,7 @@ A pasta deve conter `labels.csv` e as imagens, normalmente dentro de `images/`.
 
 | Topologia        | Descrição                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------- |
-| `knn-out`        | Cada nó agrega os seus `k` vizinhos por distância euclidiana.                          |
+| `knn-out`        | Cada nó agrega os seus `k` vizinhos pela métrica escolhida (padrão: euclidiana).        |
 | `knn-in`         | Inverte as arestas do kNN; cada nó agrega os nós que o escolheram como vizinho.        |
 | `knn-union`      | União entre `knn-out` e `knn-in`, produzindo um grafo simétrico. É a opção padrão.     |
 | `knn-reciprocal` | Mantém apenas relações kNN mútuas.                                                     |
@@ -198,6 +198,75 @@ jaccardk
 jaccard-median
 jaccard-max
 ```
+
+### Métrica do kNN
+
+Use `--knn-metric cosine` para selecionar vizinhos por cosseno nas variantes
+`knn-out`, `knn-in`, `knn-union` e `knn-reciprocal`. O padrão permanece
+`--knn-metric euclidean`. Esta opção é independente de `--dgcg-metric` e de
+`--grande-metric`. As arestas continuam binárias por padrão; selecionar cosseno
+não restaura a ponderação exponencial do antigo script dos Downloads.
+No simulador, use o seletor **Métrica dos vizinhos kNN**. Checkpoints kNN por
+cosseno recebem o sufixo `cosine` para distinguir as duas configurações.
+
+## Rankings globais somente no treinamento
+
+Para comparar o DGCG episodico com uma variante que calcula suas correlacoes
+usando rankings de todas as imagens da particao de treino:
+
+```bash
+./venv/bin/python protosgc_fewshot.py \
+  --graph-type dgcg \
+  --dgcg-metric euclidean \
+  --dgcg-train-global-rankings \
+  --work-dir runs/dgcg_rankings_treino \
+  --quick
+```
+
+Para a referencia episodica, execute com os mesmos argumentos e semente,
+removendo `--dgcg-train-global-rankings` e usando outra pasta em `--work-dir`.
+A opcao e desativada por padrao. Tambem aceita `dgcg-plus` e `all`; em `all`,
+somente as variantes DGCG mudam. ProtoNet e uma topologia kNN isolada nao
+aceitam essa flag.
+
+O fluxo da variante e:
+
+1. Concatena somente embeddings de `splits["train"]`, mantendo um ID por imagem.
+2. Compara todas essas imagens para gerar rankings de tamanho
+   `min(--dgcg-list-size, numero de imagens de treino)`, incluindo o proprio item.
+3. Em cada episodio, seleciona os rankings das imagens de suporte e consulta
+   pelos IDs e compara seus prefixos com RBO/Jaccard. Itens externos ao episodio
+   continuam nos rankings e contribuem para as intersecoes.
+4. Usa essa matriz de correlacoes para selecionar as arestas entre os nos do
+   episodio. A lista de candidatos e o procedimento de limiar continuam locais.
+5. Validacao e teste usam exclusivamente rankings dos respectivos episodios.
+
+Assim, o top-k da correlacao no treino pode superar o numero de nos do episodio,
+mas o grafo continua contendo somente suporte e consultas. Os pesos nativos do
+DGCG+ continuam episodicos: esta primeira ablacao muda apenas as correlacoes
+usadas na selecao. O grau GRaNDe, inclusive seu modo RBO em `X Theta`, e o RBF
+opcional tambem continuam sendo calculados nos vetores do episodio.
+
+Os rankings sao calculados uma vez por treinamento de uma topologia, em CPU,
+e mantidos na memoria. A busca e exata, em blocos: tem custo de comparar todos
+os pares de treino, mas nao guarda uma matriz global de correlacoes N x N.
+Guarda apenas os rankings N x L e calcula correlacoes para os nos de cada
+episodio. Em empates de distancia, o ranking global usa a ordem estavel dos IDs,
+sempre colocando o proprio item primeiro.
+
+O identificador `(classe, indice da imagem)` serve apenas para localizar o
+ranking, sem usar igualdade de rotulos na correlacao. Nao procura imagens por
+igualdade dos embeddings, evitando confundir exemplos com vetores duplicados.
+Os arquivos de checkpoint recebem o sufixo `train-global-rankings` e a flag e
+registrada em `args`. Nao ha carregamento automatico desses rankings do disco.
+
+Essa variante usa contextos diferentes no treino e na avaliacao. Usar rankings
+globais tambem na validacao/teste seria outro protocolo: cada episodio teria
+acesso indireto a outras imagens da sua particao. Nao esta habilitado aqui.
+
+A implementacao de pre-calculo esta em
+[`training_rankings.py`](proto_sgc/graphs/training_rankings.py); o ponto que
+fornece as correlacoes ao modelo esta em [`training.py`](proto_sgc/training.py).
 
 ## Ablação opcional com pesos RBF
 

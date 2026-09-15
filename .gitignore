@@ -4,3 +4,4 @@ proto_sgc/__pycache__/
 venv/
 data/
 runs/
+proto_sgc/graphs/__pycache__

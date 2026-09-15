@@ -75,6 +75,10 @@ def main() -> None:
         run_args = copy.copy(args)
         run_args.graph_type = graph_type
         run_name = graph_type if args.model == "proto-sgc" else "sem-grafo"
+        if args.model == "proto-sgc" and graph_type.startswith("knn"):
+            run_name = f"{run_name}+{args.knn_metric}"
+        if args.dgcg_train_global_rankings and graph_type in DGCG_GRAPH_TYPES:
+            run_name = f"{run_name}+train-global-rankings"
         if args.model == "proto-sgc" and args.cosine_rbf_weight:
             run_name = f"{run_name}+cosine-rbf"
         if args.model == "proto-sgc" and args.grande:
@@ -107,7 +111,14 @@ def main() -> None:
                 effective_list_size - 1,
                 episode_nodes - 1,
             )
-            effective_top_k = min(args.dgcg_top_k, effective_list_size)
+            # Candidatos continuam locais. Apenas os rankings usados na
+            # correlacao podem ter mais itens que o episodio de treino.
+            ranking_nodes = (
+                sum(len(features_by_class[name]) for name in splits["train"])
+                if args.dgcg_train_global_rankings else episode_nodes
+            )
+            correlation_list_size = min(args.dgcg_list_size, ranking_nodes)
+            effective_top_k = min(args.dgcg_top_k, correlation_list_size)
             if args.dgcg_threshold is not None:
                 threshold_description = f"manual={args.dgcg_threshold:g}"
             elif args.dgcg_target_density is not None:
@@ -134,7 +145,7 @@ def main() -> None:
             print(
                 f"{graph_label} efetivo por episodio: "
                 f"metrica={args.dgcg_metric}, correlacao={args.dgcg_correlation}, "
-                f"L={effective_list_size}, "
+                f"L da correlacao no treino={correlation_list_size}, "
                 f"candidatos={effective_candidate_k}, top-k={effective_top_k}, "
                 f"limiar={threshold_description}{weighting_description}."
             )
@@ -145,6 +156,7 @@ def main() -> None:
             output_dim=args.feature_dim,
             model_name=args.model,
             knn=args.knn,
+            knn_metric=args.knn_metric,
             graph_type=graph_type,
             sgc_hops=args.sgc_hops,
             graph_temperature=args.graph_temperature,

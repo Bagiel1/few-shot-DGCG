@@ -19,6 +19,7 @@ from .config import (
     DGCG_METRICS,
     GRANDE_METRICS,
     GRAPH_TYPES,
+    KNN_METRICS,
 )
 from .graphs import dgcg, grande, knn
 
@@ -59,6 +60,7 @@ class ProtoSGC(nn.Module):
         dgcg_target_degree: tuple[float, float] | list[float] = (4.0, 6.0),
         dgcg_target_density: tuple[float, float] | list[float] | None = None,
         dgcg_rbo_p: float = 0.9,
+        knn_metric: str = "euclidean",
     ) -> None:
         """Configura a projecao aprendivel e todas as variantes de grafo.
 
@@ -73,6 +75,8 @@ class ProtoSGC(nn.Module):
         # antes que um episodio seja amostrado ou um tensor seja alocado.
         if knn < 1:
             raise ValueError("knn deve ser >= 1.")
+        if knn_metric not in KNN_METRICS:
+            raise ValueError(f"knn-metric deve ser um de {KNN_METRICS}.")
         if sgc_hops < 1:
             raise ValueError("sgc-hops deve ser >= 1.")
         if cosine_rbf_weight and graph_temperature <= 0:
@@ -123,6 +127,7 @@ class ProtoSGC(nn.Module):
         # mas determinam como a adjacencia de cada episodio sera construida.
         self.model_name = model_name
         self.knn = knn
+        self.knn_metric = knn_metric
         self.graph_type = graph_type
         self.sgc_hops = sgc_hops
         self.graph_temperature = graph_temperature
@@ -164,6 +169,8 @@ class ProtoSGC(nn.Module):
         support_y: torch.Tensor,
         query_x: torch.Tensor,
         n_way: int,
+        *,
+        dgcg_correlations: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Constroi prototipos do suporte e devolve logits para as consultas.
 
@@ -175,7 +182,9 @@ class ProtoSGC(nn.Module):
         n_support = support_x.shape[0]
 
         # A concatenacao e necessaria para construir um unico grafo transdutivo.
-        embeddings = self.encode_episode(torch.cat((support_x, query_x), dim=0))
+        # A matriz opcional vem dos rankings de treino; nao contem rotulos.
+        graph_options = {} if dgcg_correlations is None else {"dgcg_correlations": dgcg_correlations}
+        embeddings = self.encode_episode(torch.cat((support_x, query_x), dim=0), **graph_options)
         support_embeddings = embeddings[:n_support]
         query_embeddings = embeddings[n_support:]
 
@@ -194,7 +203,9 @@ class ProtoSGC(nn.Module):
         scale = self.logit_scale.exp().clamp(max=100.0)
         return -scale * squared_distances
 
-    def encode_episode(self, features: torch.Tensor) -> torch.Tensor:
+    def encode_episode(
+        self, features: torch.Tensor, *, dgcg_correlations: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """Produz uma representacao normalizada para todos os nos do episodio.
 
         Em ``proto-sgc``, suporte e consultas participam conjuntamente de
@@ -202,6 +213,11 @@ class ProtoSGC(nn.Module):
         ``protonet``, nao ha adjacencia nem troca de informacao entre exemplos.
         """
 
+        if dgcg_correlations is not None and (
+            self.model_name != "proto-sgc" or self.graph_type not in DGCG_GRAPH_TYPES
+        ):
+            raise ValueError("Correlacoes externas requerem Proto-SGC com DGCG/DGCG+.")
+        graph_options = {} if dgcg_correlations is None else {"dgcg_correlations": dgcg_correlations}
         if self.model_name == "proto-sgc":
             if self.grande:
                 # O GRaNDe oficial mede distancias em H^(0) = X Theta e as
@@ -210,12 +226,13 @@ class ProtoSGC(nn.Module):
                 adjacency = self.normalized_graph_adjacency(
                     graph_features=features,
                     degree_features=propagated,
+                    **graph_options,
                 )
             else:
                 # Sem GRaNDe, a adjacencia independe de Theta. Assim, a
                 # propagacao pode ocorrer em X antes da projecao linear.
                 propagated = features
-                adjacency = self.normalized_graph_adjacency(features)
+                adjacency = self.normalized_graph_adjacency(features, **graph_options)
 
             # SGC remove ativacoes e pesos entre camadas: cada salto e apenas
             # uma nova multiplicacao pela mesma adjacencia normalizada.
@@ -236,6 +253,8 @@ class ProtoSGC(nn.Module):
         self,
         graph_features: torch.Tensor,
         degree_features: torch.Tensor | None = None,
+        *,
+        dgcg_correlations: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Adiciona autolacos e aplica normalizacao por graus de saida/entrada.
 
@@ -249,7 +268,8 @@ class ProtoSGC(nn.Module):
         dirigidos, as vizinhancas de saida e entrada sao tratadas separadamente.
         """
         n_nodes = graph_features.shape[0]
-        adjacency = self.graph_adjacency(graph_features)
+        graph_options = {} if dgcg_correlations is None else {"dgcg_correlations": dgcg_correlations}
+        adjacency = self.graph_adjacency(graph_features, **graph_options)
         # Autolacos sao adicionados aqui, de forma identica para todas as
         # topologias e depois da eventual substituicao dos pesos das arestas.
         adjacency = adjacency + torch.eye(
@@ -283,7 +303,9 @@ class ProtoSGC(nn.Module):
             * in_degree_inv_sqrt[None, :]
         )
 
-    def graph_adjacency(self, features: torch.Tensor) -> torch.Tensor:
+    def graph_adjacency(
+        self, features: torch.Tensor, *, dgcg_correlations: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """Despacha a topologia solicitada e, se pedido, substitui seus pesos."""
 
         if self.graph_type in DGCG_GRAPH_TYPES:
@@ -293,6 +315,7 @@ class ProtoSGC(nn.Module):
                     self.graph_type == "dgcg-plus"
                     and not self.cosine_rbf_weight
                 ),
+                correlations=dgcg_correlations,
             )
         else:
             adjacency = self.knn_adjacency(features)
@@ -353,12 +376,13 @@ class ProtoSGC(nn.Module):
         self,
         features: torch.Tensor,
     ) -> torch.Tensor:
-        """Constroi a adjacencia kNN euclidiana e binaria, sem autolacos."""
+        """Constroi a adjacencia kNN binaria com a metrica escolhida, sem autolacos."""
 
         return knn.knn_adjacency(
             features,
             knn=self.knn,
             graph_type=self.graph_type,
+            metric=self.knn_metric,
         )
 
     @torch.no_grad()
@@ -377,6 +401,8 @@ class ProtoSGC(nn.Module):
         self,
         features: torch.Tensor,
         weighted: bool = False,
+        *,
+        correlations: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Constroi a adjacencia do DGCG/DGCG+, sem autolacos."""
 
@@ -392,6 +418,7 @@ class ProtoSGC(nn.Module):
             target_density=self.dgcg_target_density,
             rbo_p=self.dgcg_rbo_p,
             dtype=self.theta.weight.dtype,
+            correlations=correlations,
         )
 
     @torch.no_grad()

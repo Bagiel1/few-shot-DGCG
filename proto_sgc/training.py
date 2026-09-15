@@ -18,6 +18,7 @@ from tqdm.auto import trange
 from .config import DGCG_GRAPH_TYPES
 from .episodes import FeatureEpisodeSampler, episode_to_device
 from .model import ProtoSGC
+from .graphs.training_rankings import TrainingRankings
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,24 @@ def train_model(
     """
 
     model.to(device)
+    use_global_rankings = (
+        getattr(args, "dgcg_train_global_rankings", False)
+        and args.model == "proto-sgc"
+        and args.graph_type in DGCG_GRAPH_TYPES
+    )
+    training_rankings = None
+    if use_global_rankings:
+        print("Preparando rankings DGCG com todas as imagens de treino...")
+        training_rankings = TrainingRankings(
+            sampler.features_by_class, splits["train"],
+            list_size=args.dgcg_list_size, metric=args.dgcg_metric,
+        )
+        print(
+            f"Rankings de treino: {training_rankings.rankings.shape[0]} imagens, "
+            f"L={training_rankings.rankings.shape[1]}. "
+            "Somente correlacoes do DGCG usam contexto global; "
+            "validacao/teste permanecem episodicos."
+        )
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.learning_rate,
@@ -107,6 +126,8 @@ def train_model(
     best_val_accuracy = -math.inf
     # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
     graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
+    if args.model == "proto-sgc" and args.graph_type.startswith("knn") and model.knn_metric != "euclidean":
+        graph_suffix = f"{graph_suffix}-{model.knn_metric}"
     if args.model == "proto-sgc" and args.graph_type in DGCG_GRAPH_TYPES:
         if args.dgcg_threshold is not None:
             threshold_tag = f"t{args.dgcg_threshold:g}"
@@ -130,6 +151,8 @@ def train_model(
         if args.grande_metric == "rbo":
             metric_tag = f"rbo-p{args.grande_rbo_p:g}".replace(".", "p")
         graph_suffix = f"{graph_suffix}-grande-{metric_tag}-sigma{sigma_tag}"
+    if use_global_rankings:
+        graph_suffix = f"{graph_suffix}-train-global-rankings"
     checkpoint_path = args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
     # As medias moveis abaixo sao apenas para a barra de progresso; elas nao
     # interferem na loss otimizada nem na escolha do checkpoint.
@@ -142,12 +165,23 @@ def train_model(
 
         # Cada iteracao do otimizador corresponde a um novo episodio few-shot.
         episode = episode_to_device(sampler.sample(splits["train"], train_rng), device)
+        graph_options = {}
+        if training_rankings is not None:
+            graph_options["dgcg_correlations"] = training_rankings.correlations(
+                episode.sample_ids,
+                correlation=args.dgcg_correlation,
+                top_k=args.dgcg_top_k,
+                rbo_p=args.dgcg_rbo_p,
+                dtype=model.theta.weight.dtype,
+                device=device,
+            )
         optimizer.zero_grad(set_to_none=True)
         logits = model(
             episode.support_x,
             episode.support_y,
             episode.query_x,
             args.n_way,
+            **graph_options,
         )
         loss = F.cross_entropy(logits, episode.query_y)
         loss.backward()

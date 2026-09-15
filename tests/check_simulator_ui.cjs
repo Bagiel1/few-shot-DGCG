@@ -16,6 +16,7 @@ from simulador.source_code import code_catalog
 torch.set_num_threads(1)
 configs = [
     {'steps': 3, 'n_way': 2, 'n_shot': 1, 'n_query': 2},
+    {'steps': 1, 'n_way': 2, 'knn_metric': 'cosine'},
     {'steps': 2, 'n_way': 2, 'model_name': 'protonet'},
     {'steps': 2, 'n_way': 2, 'graph_type': 'dgcg-plus', 'grande_metric': 'rbo', 'cosine_rbf_weight': True},
 ]

@@ -49,6 +49,8 @@ def dgcg_correlation_matrix(
     evitar os lacos Python quadruplicados durante o treino episodico.
     ``correlation`` e ``rbo_p`` permitem que o GRaNDe use RBO com o seu
     proprio p, sem interferir na correlacao escolhida para a topologia.
+    Cada linha pode conter IDs de um universo maior que o numero de linhas,
+    como quando apenas os rankings dos nos episodicos sao retirados do treino.
     """
     n_nodes, list_size = ranked_lists.shape
     top_k = min(top_k, list_size)
@@ -56,7 +58,12 @@ def dgcg_correlation_matrix(
 
     # prefixes[i, d] indica os itens presentes nos primeiros d+1 lugares
     # do ranking i. Cada ranking nao contem elementos repetidos.
-    prefixes = F.one_hot(truncated, num_classes=n_nodes).cumsum(dim=1)
+    # Os rankings podem referenciar imagens fora do episodio. Compacta os IDs
+    # presentes preservando igualdade/intersecoes, sem alocar pelo tamanho global.
+    unique_ids, compact_ids = torch.unique(truncated, return_inverse=True)
+    prefixes = F.one_hot(
+        compact_ids.reshape_as(truncated), num_classes=unique_ids.numel()
+    ).cumsum(dim=1)
     prefixes = prefixes.clamp_max(1).to(dtype=dtype)
     # Para cada profundidade d, overlaps[d, i, j] e o tamanho da intersecao
     # entre os prefixos dos rankings dos nos i e j.
@@ -232,6 +239,7 @@ def dgcg_adjacency(
     target_density: tuple[float, float] | None,
     rbo_p: float,
     dtype: torch.dtype,
+    correlations: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Constroi a adjacencia do DGCG/DGCG+, sem autolacos.
 
@@ -241,6 +249,9 @@ def dgcg_adjacency(
     Quando ``weighted`` e verdadeiro, a topologia permanece identica e
     cada aresta recebe a media dos escores de vizinhanca mutua dos seus
     extremos, exatamente como no DGCG+.
+    ``correlations`` opcional substitui somente os escores de selecao por uma
+    matriz externa na ordem dos nos do episodio. Candidatos, limiar e pesos
+    de vizinhanca mutua continuam calculados a partir do episodio.
     Os autolacos sao retirados da selecao e adicionados depois, de forma
     uniforme para todos os tipos de grafo.
 
@@ -260,9 +271,14 @@ def dgcg_adjacency(
         )
 
     ranked_lists = build_ranked_lists(features, list_size, metric=metric)
-    correlations = dgcg_correlation_matrix(
-        ranked_lists, correlation=correlation, rbo_p=rbo_p, top_k=top_k, dtype=dtype
-    )
+    if correlations is None:
+        correlations = dgcg_correlation_matrix(
+            ranked_lists, correlation=correlation, rbo_p=rbo_p, top_k=top_k, dtype=dtype
+        )
+    else:
+        if correlations.shape != (n_nodes, n_nodes):
+            raise ValueError("Correlacoes externas devem ter formato [nos do episodio, nos do episodio].")
+        correlations = correlations.detach().to(device=features.device, dtype=dtype)
 
     # A primeira coluna e o proprio no. As colunas seguintes sao os
     # candidatos que podem originar arestas na topologia DGCG.

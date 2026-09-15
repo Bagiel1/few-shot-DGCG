@@ -30,6 +30,7 @@ GRAPH_TYPES = (
 # GRaNDe adaptado de https://github.com/rduarte12/SBBD-2026_GRaNDe.
 DGCG_CORRELATIONS = ("rbo", "jaccardk", "jaccard-median", "jaccard-max")
 DGCG_METRICS = ("cosine", "euclidean")
+KNN_METRICS = ("euclidean", "cosine")
 # Distancia usada nas arestas pelo GRaNDe; euclidean reproduz o codigo oficial.
 GRANDE_METRICS = ("euclidean", "cosine", "rbo")
 
@@ -114,9 +115,15 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=5,
         help=(
-            "Numero de vizinhos das variantes kNN euclidianas e binarias; "
+            "Numero de vizinhos das variantes kNN; "
             "nao e usado por DGCG/DGCG+."
         ),
+    )
+    graph.add_argument(
+        "--knn-metric",
+        choices=KNN_METRICS,
+        default="euclidean",
+        help="Metrica para selecionar vizinhos kNN; independente de --dgcg-metric. Pesos padrao binarios.",
     )
     graph.add_argument(
         "--graph-type",
@@ -193,6 +200,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Metrica que gera os rankings do DGCG. Euclidean e o padrao e "
             "reproduz as ranked lists geradas pelo BallTree original."
+        ),
+    )
+    graph.add_argument(
+        "--dgcg-train-global-rankings",
+        action="store_true",
+        help=(
+            "Usa rankings de todas as imagens de treino nas correlacoes do DGCG/DGCG+. "
+            "Candidatos, limiar e pesos DGCG+ continuam episodicos. "
+            "Validacao e teste usam somente rankings do episodio."
         ),
     )
     graph.add_argument(
@@ -287,6 +303,10 @@ def parse_args() -> argparse.Namespace:
 def validate_hyperparameters(args: argparse.Namespace) -> None:
     """Valida relacoes numericas que o argparse nao expressa sozinho."""
 
+    if getattr(args, "dgcg_train_global_rankings", False) and (
+        args.model != "proto-sgc" or args.graph_type not in (*DGCG_GRAPH_TYPES, "all")
+    ):
+        raise ValueError("--dgcg-train-global-rankings requer proto-sgc com dgcg, dgcg-plus ou all.")
     # ``argparse`` valida tipos e escolhas; limites como > 0 precisam ser
     # verificados explicitamente depois da leitura.
     positive_ints = {
