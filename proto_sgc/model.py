@@ -18,6 +18,7 @@ from .config import (
     DGCG_GRAPH_TYPES,
     DGCG_METRICS,
     GRANDE_METRICS,
+    GRAPH_ALIASES,
     GRAPH_TYPES,
     KNN_METRICS,
 )
@@ -90,7 +91,7 @@ class ProtoSGC(nn.Module):
             )
         if not 0.0 < grande_rbo_p < 1.0:
             raise ValueError("grande-rbo-p deve estar estritamente entre 0 e 1.")
-        if graph_type not in GRAPH_TYPES:
+        if graph_type not in (*GRAPH_TYPES, *GRAPH_ALIASES):
             raise ValueError(
                 f"graph-type deve ser um de {GRAPH_TYPES}; recebido: {graph_type!r}."
             )
@@ -161,6 +162,7 @@ class ProtoSGC(nn.Module):
         self.theta = nn.Linear(input_dim, output_dim, bias=False)
         self.normalization = nn.LayerNorm(output_dim)
         self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        self.graph_observer = None
 
     # Fluxo de chamadas: forward → encode_episode → normalized_graph_adjacency.
     def forward(
@@ -243,6 +245,8 @@ class ProtoSGC(nn.Module):
         else:
             # Baseline ProtoNet: cada exemplo e projetado isoladamente.
             propagated = self.theta(features)
+            if self.graph_observer is not None:
+                self.graph_observer(features.new_zeros((len(features), len(features))))
 
         # LayerNorm atua por vetor; a normalizacao L2 posterior permite
         # comparar as representacoes em uma escala comum.
@@ -323,6 +327,8 @@ class ProtoSGC(nn.Module):
         # crie nem remova arestas; ele apenas substitui valores nao nulos.
         if self.cosine_rbf_weight:
             adjacency = self.apply_cosine_rbf_weights(features, adjacency)
+        if self.graph_observer is not None:
+            self.graph_observer(adjacency)
         return adjacency
 
     # Cálculos de grafo: as implementações estão em graphs/.

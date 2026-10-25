@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,19 +20,34 @@ from .config import DGCG_GRAPH_TYPES
 from .episodes import FeatureEpisodeSampler, episode_to_device
 from .model import ProtoSGC
 from .graphs.training_rankings import TrainingRankings
+from .graphs.training_rankings import build_reference_ranked_lists
+from .graphs.dgcg import dgcg_correlation_matrix
+from .reference_bank import ExtraReferenceBank
+from .metrics import classification_scores, record_graphs
 
 
 @dataclass(frozen=True)
 class Metrics:
-    """Resumo da avaliacao: entropia cruzada, acuracia media e IC de 95%."""
+    """Medias episodicas, IC95 e topologia; novos campos opcionais para legado."""
 
     loss: float
     accuracy: float
     ci95: float
+    macro_f1: float | None = None
+    macro_f1_ci95: float | None = None
+    balanced_accuracy: float | None = None
+    balanced_accuracy_ci95: float | None = None
+    graph: dict | None = None
 
 
 @torch.no_grad()
-def evaluate(
+def evaluate(model, *args, **kwargs):
+    # Restaura o observador mesmo se a avaliacao falhar.
+    with record_graphs(model) as graph_statistics:
+        return _evaluate(model, *args, graph_statistics=graph_statistics, **kwargs)
+
+
+def _evaluate(
     model: ProtoSGC,
     sampler: FeatureEpisodeSampler,
     allowed_classes: Sequence[str],
@@ -39,6 +55,10 @@ def evaluate(
     n_way: int,
     device: torch.device,
     seed: int,
+    *,
+    training_rankings: TrainingRankings | None = None,
+    extra_reference_bank: ExtraReferenceBank | None = None,
+    graph_statistics=None,
 ) -> Metrics:
     """Avalia o modelo em episodios reproduziveis, sem calcular gradientes.
 
@@ -48,23 +68,54 @@ def evaluate(
 
     if n_episodes < 1:
         raise ValueError("O numero de episodios de avaliacao deve ser >= 1.")
+    if training_rankings is not None and extra_reference_bank is not None:
+        raise ValueError("Escolha um unico contexto extra de avaliacao.")
+    if extra_reference_bank is not None and set(allowed_classes) != set(extra_reference_bank.classes):
+        raise ValueError("Banco de referencias pertence a outra particao de classes.")
     model.eval()
     # O gerador local evita que a avaliacao altere a sequencia aleatoria usada
     # pelo meta-treino ou por outra topologia.
     rng = np.random.default_rng(seed)
     losses: list[float] = []
     accuracies: list[float] = []
+    f1_scores: list[float] = []
+    balanced_scores: list[float] = []
     for _ in range(n_episodes):
-        episode = episode_to_device(sampler.sample(allowed_classes, rng), device)
+        sampled = (extra_reference_bank.sample(rng) if extra_reference_bank is not None
+                   else sampler.sample(allowed_classes, rng))
+        episode = episode_to_device(sampled, device)
+        graph_options = {}
+        if extra_reference_bank is not None and extra_reference_bank.count:
+            rankings = build_reference_ranked_lists(
+                torch.cat((episode.support_x, episode.query_x)),
+                extra_reference_bank.extra_features(episode),
+                list_size=model.dgcg_list_size, metric=model.dgcg_metric,
+            )
+            graph_options["dgcg_correlations"] = dgcg_correlation_matrix(
+                rankings, correlation=model.dgcg_correlation, top_k=model.dgcg_top_k,
+                rbo_p=model.dgcg_rbo_p, dtype=model.theta.weight.dtype,
+            )
+        if training_rankings is not None:
+            if any(item in training_rankings.row_by_id for item in episode.sample_ids):
+                raise ValueError("Avaliacao de referencia requer episodio disjunto do treino.")
+            graph_options["dgcg_correlations"] = training_rankings.episode_correlations(
+                torch.cat((episode.support_x, episode.query_x)),
+                correlation=model.dgcg_correlation, top_k=model.dgcg_top_k,
+                rbo_p=model.dgcg_rbo_p, dtype=model.theta.weight.dtype,
+            )
         logits = model(
             episode.support_x,
             episode.support_y,
             episode.query_x,
             n_way,
+            **graph_options,
         )
         losses.append(F.cross_entropy(logits, episode.query_y).item())
         predictions = logits.argmax(dim=1)
         accuracies.append((predictions == episode.query_y).float().mean().item())
+        f1, balanced = classification_scores(episode.query_y, predictions, n_way)
+        f1_scores.append(f1)
+        balanced_scores.append(balanced)
 
     accuracy_array = np.asarray(accuracies, dtype=np.float64)
 
@@ -78,7 +129,16 @@ def evaluate(
         loss=float(np.mean(losses)),
         accuracy=float(accuracy_array.mean()),
         ci95=float(ci95),
+        macro_f1=float(np.mean(f1_scores)),
+        macro_f1_ci95=_ci95(f1_scores),
+        balanced_accuracy=float(np.mean(balanced_scores)),
+        balanced_accuracy_ci95=_ci95(balanced_scores),
+        graph=graph_statistics.summary(),
     )
+
+
+def _ci95(values):
+    return float(1.96 * np.std(values, ddof=1) / math.sqrt(len(values))) if len(values) > 1 else 0.
 
 
 def train_model(
@@ -96,8 +156,19 @@ def train_model(
     """
 
     model.to(device)
+    extra_count = getattr(args, "dgcg_extra_references", None)
+    val_bank = test_bank = None
+    if extra_count is not None:
+        val_bank = ExtraReferenceBank(sampler, splits["val"], count=extra_count,
+                                     per_class=args.dgcg_extra_bank_per_class, seed=args.seed + 4202)
+        test_bank = ExtraReferenceBank(sampler, splits["test"], count=extra_count,
+                                      per_class=args.dgcg_extra_bank_per_class, seed=args.seed + 4303)
+        print(f"Referencias extras na avaliacao: {extra_count} por episodio; "
+              f"banco fixo de {args.dgcg_extra_bank_per_class} imagens por classe, "
+              "excluido de suporte/consultas. Treino nao usa esse banco.")
+    reference_evaluation = getattr(args, "dgcg_reference_train_rankings", False)
     use_global_rankings = (
-        getattr(args, "dgcg_train_global_rankings", False)
+        (getattr(args, "dgcg_train_global_rankings", False) or reference_evaluation)
         and args.model == "proto-sgc"
         and args.graph_type in DGCG_GRAPH_TYPES
     )
@@ -108,11 +179,16 @@ def train_model(
             sampler.features_by_class, splits["train"],
             list_size=args.dgcg_list_size, metric=args.dgcg_metric,
         )
+        evaluation_context = (
+            "validacao/teste usam treino + episodio atual." if reference_evaluation
+            else "validacao/teste usam episodio + banco reservado." if val_bank is not None
+            else "validacao/teste permanecem episodicos."
+        )
         print(
             f"Rankings de treino: {training_rankings.rankings.shape[0]} imagens, "
             f"L={training_rankings.rankings.shape[1]}. "
             "Somente correlacoes do DGCG usam contexto global; "
-            "validacao/teste permanecem episodicos."
+            + evaluation_context
         )
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -124,6 +200,7 @@ def train_model(
     train_rng = np.random.default_rng(args.seed + 101)
     best_state = copy.deepcopy(model.state_dict())
     best_val_accuracy = -math.inf
+    best_val_metrics = None
     # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
     graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
     if args.model == "proto-sgc" and args.graph_type.startswith("knn") and model.knn_metric != "euclidean":
@@ -151,8 +228,12 @@ def train_model(
         if args.grande_metric == "rbo":
             metric_tag = f"rbo-p{args.grande_rbo_p:g}".replace(".", "p")
         graph_suffix = f"{graph_suffix}-grande-{metric_tag}-sigma{sigma_tag}"
-    if use_global_rankings:
+    if use_global_rankings and reference_evaluation:
+        graph_suffix = f"{graph_suffix}-reference-train-rankings"
+    elif use_global_rankings:
         graph_suffix = f"{graph_suffix}-train-global-rankings"
+    if extra_count is not None:
+        graph_suffix += f"-extra{extra_count}-bank{args.dgcg_extra_bank_per_class}"
     checkpoint_path = args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
     # As medias moveis abaixo sao apenas para a barra de progresso; elas nao
     # interferem na loss otimizada nem na escolha do checkpoint.
@@ -212,16 +293,21 @@ def train_model(
                 args.n_way,
                 device,
                 seed=args.seed + 202,
+                training_rankings=training_rankings if reference_evaluation else None,
+                extra_reference_bank=val_bank,
             )
             print(
                 f"\nEp. {episode_index:4d} | validacao: "
                 f"{100 * val_metrics.accuracy:.2f}% +/- "
-                f"{100 * val_metrics.ci95:.2f}% | loss={val_metrics.loss:.4f}"
+                f"{100 * val_metrics.ci95:.2f}% | loss={val_metrics.loss:.4f} | "
+                f"f1_macro={100 * val_metrics.macro_f1:.2f}% | "
+                f"balanced_accuracy={100 * val_metrics.balanced_accuracy:.2f}%"
             )
             if val_metrics.accuracy > best_val_accuracy:
                 # Mantem uma copia em memoria e outra em disco. O teste final
                 # usara exatamente este estado, nao o estado da ultima epoca.
                 best_val_accuracy = val_metrics.accuracy
+                best_val_metrics = val_metrics
                 best_state = copy.deepcopy(model.state_dict())
                 torch.save(
                     {
@@ -230,6 +316,10 @@ def train_model(
                         "args": vars(args),
                         "class_splits": splits,
                         "validation": asdict(val_metrics),
+                        "extra_reference_banks": (
+                            {"val":val_bank.metadata(), "test":test_bank.metadata()}
+                            if val_bank is not None else None
+                        ),
                     },
                     checkpoint_path,
                 )
@@ -244,5 +334,21 @@ def train_model(
         args.n_way,
         device,
         seed=args.seed + 303,
+        training_rankings=training_rankings if reference_evaluation else None,
+        extra_reference_bank=test_bank,
+    )
+    # Saida estruturada: dispensa extrair metricas de barras de progresso/logs.
+    result = {
+        "schema_version": 2,
+        "args": {key: str(value) if isinstance(value, Path) else value
+                 for key, value in vars(args).items()},
+        "checkpoint": str(checkpoint_path), "class_splits": splits,
+        "selection_metric": "validation.accuracy",
+        "metric_aggregation": "mean_per_episode; values in [0,1]; normal CI95 across episodes",
+        "graph_definition": "nonzero neighbors per adjacency row before self-loops and normalization",
+        "validation": asdict(best_val_metrics), "test": asdict(test_metrics),
+    }
+    checkpoint_path.with_suffix(".metrics.json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8",
     )
     return model, test_metrics, checkpoint_path

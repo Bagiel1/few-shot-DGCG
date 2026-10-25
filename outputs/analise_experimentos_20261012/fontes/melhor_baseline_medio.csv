@@ -1,0 +1,2 @@
+metodo,n_way,n_shot,n_query,datasets_concluidos,media_val_acima_acaso,media_val_accuracy,desvio_val_accuracy,media_test_accuracy
+knn-reciprocal,2,10,1,10,0.852,92.6,8.778667324827842,89.565

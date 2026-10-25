@@ -1,0 +1,10 @@
+dataset,modo,alvo_min,alvo_max,media_val_outras_bases,test_accuracy,baseline_test,ganho_teste_pp
+bacteria_micro,densidade,0.125,0.125,68.27,64.76,64.55,0.21000000000000796
+birds_micro,densidade,0.125,0.125,64.9425,81.12,80.28,0.8400000000000034
+cars_micro,densidade,0.125,0.125,72.7675,33.52,32.54,0.980000000000004
+flowers_micro,grau,3.0,3.0,65.69500000000001,82.02,83.68,-1.6600000000000108
+manufacturing_micro,densidade,0.125,0.125,63.707499999999996,95.92,96.3,-0.37999999999999545
+plankton_micro,densidade,0.15,0.15,67.94,48.84,48.58,0.2600000000000051
+resisc_micro,densidade,0.125,0.125,68.3725,68.76,68.84,-0.0799999999999983
+sports_micro,densidade,0.125,0.125,66.16,55.88,56.69,-0.8099999999999952
+textures_micro,densidade,0.15,0.15,71.93,30.15,29.7,0.4499999999999993

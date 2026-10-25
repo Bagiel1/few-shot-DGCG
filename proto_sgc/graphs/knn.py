@@ -56,7 +56,7 @@ def knn_adjacency(
         return adjacency_out.T
     if graph_type == "knn-union":
         return torch.maximum(adjacency_out, adjacency_out.T)
-    if graph_type == "knn-reciprocal":
+    if graph_type in ("knn-reciprocal", "knn-mutual"):
         return torch.minimum(adjacency_out, adjacency_out.T)
     raise AssertionError(f"Variante de grafo inesperada: {graph_type}")
 

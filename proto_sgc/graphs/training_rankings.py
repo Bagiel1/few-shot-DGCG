@@ -1,6 +1,7 @@
-"""Rankings com contexto de todo o treino; consultas de correlacao por episodio.
+"""Rankings com referencias de treino e consultas de correlacao por episodio.
 
-Nao cria grafo global nem usa classes de validacao/teste. Os nomes de classes
+Nao cria grafo global. A avaliacao pode acrescentar somente o episodio atual
+ao universo de referencias. Os nomes de classes
 servem apenas para localizar exemplos, nunca para calcular similaridades.
 """
 
@@ -12,6 +13,30 @@ import torch
 import torch.nn.functional as F
 
 from .dgcg import dgcg_correlation_matrix
+
+
+@torch.no_grad()
+def build_reference_ranked_lists(
+    features: torch.Tensor, reference: torch.Tensor, *, list_size: int, metric: str,
+) -> torch.Tensor:
+    """Ordena episodio contra referencias + episodio, sem receber rotulos."""
+    if features.ndim != 2 or not len(features) or reference.ndim != 2:
+        raise ValueError("Forneca embeddings matriciais e episodio nao vazio.")
+    if features.shape[1] != reference.shape[1]:
+        raise ValueError("Dimensao das referencias difere do episodio.")
+    if list_size < 2 or metric not in ("cosine", "euclidean"):
+        raise ValueError("L deve ser >= 2 e metrica deve ser euclidean ou cosine.")
+    reference = reference.to(device=features.device, dtype=features.dtype)
+    universe = torch.cat((reference, features.detach()), dim=0)
+    if metric == "cosine":
+        values = F.normalize(features, p=2, dim=1) @ F.normalize(universe, p=2, dim=1).T
+    else:
+        values = torch.cdist(features, universe, p=2)
+    rows = torch.arange(len(features), device=features.device)
+    values[rows, len(reference) + rows] = torch.inf if metric == "cosine" else -torch.inf
+    return values.argsort(dim=1, descending=metric == "cosine", stable=True)[
+        :, :min(list_size, len(universe))
+    ]
 
 
 class TrainingRankings:
@@ -41,6 +66,10 @@ class TrainingRankings:
                 self.row_by_id[(label, index)] = len(self.row_by_id)
             blocks.append(block)
         features = torch.cat(blocks)
+        self.features = features
+        self.list_size = list_size
+        self.metric = metric
+        self._reference_by_device: dict[torch.device, torch.Tensor] = {}
         n = len(features)
         if n < 2:
             raise ValueError("Rankings de treino requerem ao menos duas imagens.")
@@ -62,6 +91,38 @@ class TrainingRankings:
             self.rankings[start:stop] = values.argsort(
                 dim=1, descending=metric == "cosine", stable=True
             )[:, :length]
+
+    @torch.no_grad()
+    def episode_rankings(self, features: torch.Tensor) -> torch.Tensor:
+        """Rankings dos nos episodicos no universo treino + episodio atual.
+
+        IDs [0, N_treino) identificam referencias de treino; os IDs seguintes
+        identificam suporte+consulta. Nenhum outro episodio entra neste universo.
+        O proprio no e sempre o primeiro item. Nao recebe rotulos.
+        """
+        if features.ndim != 2 or len(features) == 0:
+            raise ValueError("Forneca embeddings de um episodio nao vazio.")
+        if features.shape[1] != self.features.shape[1]:
+            raise ValueError("Dimensao dos embeddings difere do conjunto de treino.")
+        device = features.device
+        reference = self._reference_by_device.get(device)
+        if reference is None:
+            reference = self.features.to(device)
+            self._reference_by_device[device] = reference
+        return build_reference_ranked_lists(
+            features, reference, list_size=self.list_size, metric=self.metric,
+        )
+
+    @torch.no_grad()
+    def episode_correlations(
+        self, features: torch.Tensor, *, correlation: str, top_k: int,
+        rbo_p: float, dtype: torch.dtype,
+    ) -> torch.Tensor:
+        """Compara apenas rankings dos nos do episodio, usando treino como referencia."""
+        return dgcg_correlation_matrix(
+            self.episode_rankings(features), correlation=correlation,
+            top_k=top_k, rbo_p=rbo_p, dtype=dtype,
+        )
 
     @torch.no_grad()
     def correlations(

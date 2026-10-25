@@ -209,6 +209,92 @@ não restaura a ponderação exponencial do antigo script dos Downloads.
 No simulador, use o seletor **Métrica dos vizinhos kNN**. Checkpoints kNN por
 cosseno recebem o sufixo `cosine` para distinguir as duas configurações.
 
+## Referencias extras reservadas, sem aumentar o grafo
+
+Experimento opcional para controlar quantas imagens nao rotuladas das mesmas
+classes entram somente nos rankings durante validacao e teste:
+
+```bash
+python protosgc_fewshot.py \
+  --graph-type dgcg \
+  --n-way 5 --n-shot 1 --n-query 5 \
+  --dgcg-extra-references 50 \
+  --work-dir runs/dgcg_extras
+```
+
+`--dgcg-extra-references N` define o TOTAL de extras por episodio, nao por classe.
+Com 5-way e N=50, sao 10 referencias por classe selecionada. Quando N nao e
+divisivel por n-way, a distribuicao difere em no maximo uma imagem por classe.
+
+O banco e fixo por particao, determinado pela seed: por padrao reserva 20 imagens
+por classe, configuravel por `--dgcg-extra-bank-per-class`. Essas imagens nunca
+sao amostradas como suporte ou consultas em qualquer episodio dessa particao.
+Validacao e teste tem bancos independentes de suas proprias classes. O treino
+nao usa esses bancos. A flag antiga `--dgcg-train-global-rankings` pode ser
+combinada para manter contexto global somente no treino, se desejado.
+
+Nas bases Micro com 40 imagens por classe, o banco de 20 deixa outras 20 para
+suporte/consultas e permite ate 100 extras em 5-way. Banco+shot+query precisa
+caber em cada classe; uma configuracao impossivel falha antes do treino.
+
+As referencias usadas num episodio sao exclusivamente das suas classes, com
+prefixos do banco reservado. Os rotulos reais servem para organizar esse
+protocolo de amostragem; nao sao fornecidos a funcao de rankings/correlacoes.
+Isto assume um banco nao rotulado das classes-alvo disponivel na avaliacao.
+
+Rankings usam `extras + suporte + consultas`, limitados por L; correlacoes ainda
+usam top-k. Grafo, candidatos, pesos e propagacao continuam contendo apenas
+suporte+consultas. Nao ha propagacao nas imagens extras. O modo nao combina com
+`--dgcg-reference-train-rankings`, pois sao contextos de avaliacao distintos.
+
+Para um controle comparavel use `--dgcg-extra-references 0`. Ele reserva o MESMO
+banco, mas nao acrescenta extras aos rankings. Use as mesmas seeds, tamanho de
+banco e protocolo em N=0/10/25/50/100: os episodios elegiveis permanecem iguais.
+Omitir a flag preserva o modo original sem reserva; portanto esse resultado nao
+e o mesmo controle N=0 do banco reservado.
+
+Cada chamada executa treino, selecao por validacao e teste; mudar N pode mudar
+o checkpoint selecionado. Nao e uma avaliacao de varios N em um checkpoint fixo.
+Os checkpoints guardam IDs da reserva e do pool episodico e usam sufixos
+`extraN-bankM`, evitando misturar com resultados anteriores. O resumo registra
+tambem esse modo. Sem a flag, o comportamento anterior permanece.
+
+## Rankings com treino como referencia em todas as fases
+
+Para usar todas as imagens de treino como contexto dos rankings, inclusive na
+avaliacao, execute:
+
+```bash
+./venv/bin/python protosgc_fewshot.py \
+  --graph-type dgcg \
+  --dgcg-reference-train-rankings \
+  --dgcg-list-size 200 \
+  --work-dir runs/dgcg_referencia_treino
+```
+
+O novo modo e opcional; sem essa flag o DGCG permanece episodico.
+
+- **Treino:** cada imagem tem sua lista ordenada contra todas as imagens de
+  `splits["train"]`, incluindo a propria imagem e os demais exemplos do episodio.
+  Exemplos episodicos nao sao duplicados. Sao guardados no maximo 200 itens por
+  ranking quando `--dgcg-list-size 200` e usado.
+- **Validacao/teste:** o universo contem apenas todas as imagens de treino e o
+  suporte+consultas do episodio atual. Sao calculados rankings para os nos do
+  episodio contra esse universo; depois suas listas sao comparadas por RBO ou
+  Jaccard. Imagens de outros episodios/classes de avaliacao nao sao referencias.
+- **Grafo:** candidatos, limiar, propagacao e pesos DGCG+ continuam restritos aos
+  nos do episodio. As imagens extras servem somente como IDs nos rankings.
+- **Rotulos:** nao entram nos rankings/correlacoes. As consultas do episodio
+  participam como embeddings nao rotulados, seguindo avaliacao transdutiva.
+  Rotulos de teste sao usados somente para medir desempenho.
+
+`L` e a quantidade de itens armazenados em cada lista, nao uma amostra de 200
+imagens de treino: a busca compara todas as referencias e guarda os primeiros
+`L`. `--dgcg-top-k` continua limitando a profundidade da correlacao (default 40).
+A referencia e congelada nos embeddings da ResNet; a avaliacao nao atualiza
+parametros. Checkpoints e resumos recebem `reference-train-rankings` para
+distinguir esse modo do experimento antigo que usava contexto global so no treino.
+
 ## Rankings globais somente no treinamento
 
 Para comparar o DGCG episodico com uma variante que calcula suas correlacoes
@@ -363,3 +449,104 @@ Outra pasta pode ser definida com:
 ```
 
 Ao final, o script informa a acurácia média, o intervalo de confiança de 95%, a loss e o caminho do melhor checkpoint de cada topologia.
+
+## Nova bateria: métricas e grau versus protocolo
+
+`buscar_metricas_graus.sh` é uma bateria separada. Não sobrescreve os resultados
+nem o PDF de outubro. Não usa referências extras nem rankings globais:
+mantém o protocolo episódico original, ResNet-18 congelada, k=5, euclidiano,
+arestas binárias, dois saltos SGC e GRaNDe desligado.
+
+Métodos: kNN-in, kNN-out, kNN-mutual, kNN-union, no-graph e DGCG.
+**Mutual é o mesmo método que reciprocal**, não uma sétima baseline.
+`--graph-type knn-mutual` é aceito como alias; o nome antigo continua funcionando.
+No-graph usa `--model protonet`: mesma projeção e classificação por protótipos,
+mas sem propagação entre imagens.
+
+```bash
+# Confira os comandos e a quantidade antes de rodar (não baixa nem treina).
+bash buscar_metricas_graus.sh --dry-run
+
+# Bateria completa na GPU; retoma execuções concluídas automaticamente.
+bash buscar_metricas_graus.sh --device cuda
+
+# Teste menor, em uma base e um protocolo (ainda são nove treinamentos).
+bash buscar_metricas_graus.sh --datasets flowers_micro --ways 5 --shots 1 --queries 5 --quick --output-root runs/metricas_smoke
+
+# Escolha de intervalos mais detalhada ou repetição com mais seeds.
+bash buscar_metricas_graus.sh --degrees 1:2 2:4 4:6 6:8 8:12 --seeds 7 17 27 --output-root runs/metricas_repeticoes
+
+# Refaz somente as tabelas/gráficos dos resultados já existentes.
+bash buscar_metricas_graus.sh --summarize-only
+```
+
+O shell respeita o Python do ambiente Conda ativo. Para outro interpretador,
+use `FMG_PYTHON=/caminho/python bash buscar_metricas_graus.sh ...`.
+
+Grade padrão: dez bases Micro, split fixo em tamanho 10/5/5, way 2/3/5,
+shot 1/5/10, query 1/5/10 e seed 7. DGCG testa os intervalos 2–4, 4–6,
+6–8 e 8–12 **em cada protocolo**, incluindo o default 4–6 como controle.
+São **2.430 treinamentos**: dez bases × 27 protocolos × (cinco baselines + quatro
+intervalos DGCG). Outra seed multiplica essa quantidade. `--quick` usa
+200/50/200 episódios em vez de 2.000/200/1.000; não confundir os resultados.
+Seeds diferentes também alteram a divisão das classes e os episódios,
+não apenas os pesos iniciais.
+
+### Métricas registradas
+
+Em cada episódio de validação/teste, calcula-se acurácia, F1 macro e
+acurácia balanceada (recall médio das classes). O resumo é a média dos
+episódios, com IC95 normal separado para cada métrica. Não se mistura a
+numeração local das classes de episódios diferentes numa única matriz de confusão.
+F1 usa zero quando uma divisão é indefinida. Nos episódios atuais, todas as
+classes têm o mesmo número de consultas: **acurácia balanceada coincide com
+acurácia comum**, salvo arredondamento.
+
+Cada execução, inclusive quando chamada diretamente por `protosgc_fewshot.py`,
+gera um `.metrics.json` ao lado do checkpoint. Contém métricas de validação
+do checkpoint selecionado e de teste desse mesmo checkpoint. Valores no JSON
+estão em [0,1]; nos CSVs da nova bateria estão em porcentagem, exceto loss e
+estatísticas de grafo. O critério de seleção continua sendo acurácia na
+validação, nunca teste. As linhas antigas de acurácia/loss no log continuam
+compatíveis com os extratores dos scripts anteriores.
+
+### Como verificar se o intervalo muda
+
+Saídas em `runs/busca_metricas_graus/`:
+
+- `resultados.csv`: todos os métodos/intervalos, métricas e graus realizados.
+- `melhores_graus_por_protocolo.csv`: melhor intervalo na validação por
+  base/seed/way/shot/query; inclui empates e ganho de teste contra 4–6.
+- `variacao_intervalos.csv`: varia um eixo por vez, mantendo base, seed e
+  demais eixos fixos; mostra intervalos escolhidos, quantidade de intervalos
+  distintos e amplitude/desvio dos centros e dos limites.
+- `graficos/`: métricas descritivas por base, mapas de intervalo escolhido
+  (shot × query em painéis de way) e grau realizado versus número de nós.
+- `manifest.json`: configuração da bateria, usada para impedir mistura de
+  execuções incompatíveis. Use outra pasta ao mudar a configuração.
+- Uma pasta por execução, com `run.log`, `checkpoint.pt` e `metrics.json`.
+  Os embeddings são compartilhados por base em `_work/`, não reextraídos
+  em cada configuração.
+
+Só se escolhe o melhor intervalo quando **todos os alvos planejados daquele
+protocolo concluíram**. Em empate de validação, prefere-se 4–6 se estiver
+empatado, depois o menor intervalo; o teste não desempata. Intervalos empatados
+ficam explícitos: mudanças na escolha não demonstram sozinhas diferença
+estatística ou um grau ideal. Gráficos gerais de métricas são descritivos e,
+se a bateria estiver parcial, podem conter configurações diferentes por método.
+
+O grau observado é a quantidade de vizinhos não nulos por linha da adjacência
+usada em `A @ X`, **antes dos autolaços e da normalização**, não a soma dos
+pesos nem o grau GRaNDe. Registra média, desvio, mínimo/máximo, p05/p95,
+densidade dirigida `arestas / (N*(N-1))`, isolamento e variação das médias
+entre episódios. Em grafos dirigidos, registra também graus por coluna.
+Para intervalos-alvo DGCG, registra os limites solicitados e efetivos,
+limitação pelo número de candidatos e fração de episódios cuja média ficou
+fora do alvo. Empates de correlação e fallback anti-isolamento podem fazer o
+grau realizado sair do intervalo. `N = way * (shot + query)`; um intervalo
+4–6 não pode ser realizado literalmente quando há apenas quatro nós.
+
+**Resultados antigos:** não é possível deduzir F1 macro apenas de acurácia
+e loss agregadas. É necessário reavaliar checkpoints ou gerar novas execuções.
+O PDF anterior não recebeu valores inventados; será atualizado com os novos
+resultados quando a bateria for executada.

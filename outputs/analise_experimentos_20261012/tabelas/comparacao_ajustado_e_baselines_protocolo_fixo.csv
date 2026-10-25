@@ -1,0 +1,46 @@
+dataset,metodo,test_accuracy,test_ci95,val_accuracy
+bacteria_micro,knn-in,63.55,0.73,59.56
+birds_micro,knn-in,75.04,0.79,87.94
+cars_micro,knn-in,32.96,0.63,26.14
+flowers_micro,knn-in,77.58,0.64,84.68
+manufacturing_micro,knn-in,96.71,0.36,100.0
+plankton_micro,knn-in,46.51,0.67,58.28
+resisc_micro,knn-in,68.97,0.81,55.96
+sports_micro,knn-in,52.46,0.76,77.02
+textures_micro,knn-in,29.13,0.63,33.7
+bacteria_micro,knn-out,64.84,0.73,61.12
+birds_micro,knn-out,77.46,0.8,93.36
+cars_micro,knn-out,34.52,0.68,27.72
+flowers_micro,knn-out,79.77,0.65,81.52
+manufacturing_micro,knn-out,96.16,0.36,99.72
+plankton_micro,knn-out,49.35,0.69,61.08
+resisc_micro,knn-out,68.69,0.79,59.42
+sports_micro,knn-out,56.14,0.8,78.92
+textures_micro,knn-out,29.76,0.6,34.12
+bacteria_micro,knn-reciprocal,65.9,0.73,61.9
+birds_micro,knn-reciprocal,74.3,0.78,90.6
+cars_micro,knn-reciprocal,36.11,0.64,27.08
+flowers_micro,knn-reciprocal,77.64,0.67,85.46
+manufacturing_micro,knn-reciprocal,96.65,0.33,100.0
+plankton_micro,knn-reciprocal,48.59,0.7,61.26
+resisc_micro,knn-reciprocal,67.64,0.74,56.8
+sports_micro,knn-reciprocal,51.81,0.77,77.62
+textures_micro,knn-reciprocal,33.62,0.63,40.32
+bacteria_micro,dgcg,64.7,0.76,61.9
+birds_micro,dgcg,80.4,0.81,92.54
+cars_micro,dgcg,32.5,0.66,27.54
+flowers_micro,dgcg,83.69,0.62,83.28
+manufacturing_micro,dgcg,96.29,0.35,99.72
+plankton_micro,dgcg,48.86,0.68,63.94
+resisc_micro,dgcg,68.87,0.77,62.64
+sports_micro,dgcg,56.75,0.77,80.18
+textures_micro,dgcg,29.68,0.63,33.12
+manufacturing_micro,DGCG ajustado (validação),92.1,0.46,100.0
+birds_micro,DGCG ajustado (validação),80.18,0.81,92.7
+flowers_micro,DGCG ajustado (validação),82.97,0.63,84.96
+sports_micro,DGCG ajustado (validação),54.75,0.81,81.08
+plankton_micro,DGCG ajustado (validação),49.73,0.68,66.3
+bacteria_micro,DGCG ajustado (validação),65.39,0.72,64.54
+resisc_micro,DGCG ajustado (validação),67.3,0.75,63.02
+textures_micro,DGCG ajustado (validação),32.67,0.67,37.48
+cars_micro,DGCG ajustado (validação),35.88,0.68,28.54

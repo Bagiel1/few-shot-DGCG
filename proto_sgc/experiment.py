@@ -77,8 +77,12 @@ def main() -> None:
         run_name = graph_type if args.model == "proto-sgc" else "sem-grafo"
         if args.model == "proto-sgc" and graph_type.startswith("knn"):
             run_name = f"{run_name}+{args.knn_metric}"
-        if args.dgcg_train_global_rankings and graph_type in DGCG_GRAPH_TYPES:
+        if args.dgcg_reference_train_rankings and graph_type in DGCG_GRAPH_TYPES:
+            run_name = f"{run_name}+reference-train-rankings"
+        elif args.dgcg_train_global_rankings and graph_type in DGCG_GRAPH_TYPES:
             run_name = f"{run_name}+train-global-rankings"
+        if args.dgcg_extra_references is not None:
+            run_name += f"+extra{args.dgcg_extra_references}-bank{args.dgcg_extra_bank_per_class}"
         if args.model == "proto-sgc" and args.cosine_rbf_weight:
             run_name = f"{run_name}+cosine-rbf"
         if args.model == "proto-sgc" and args.grande:
@@ -115,7 +119,8 @@ def main() -> None:
             # correlacao podem ter mais itens que o episodio de treino.
             ranking_nodes = (
                 sum(len(features_by_class[name]) for name in splits["train"])
-                if args.dgcg_train_global_rankings else episode_nodes
+                if (args.dgcg_train_global_rankings or args.dgcg_reference_train_rankings)
+                else episode_nodes
             )
             correlation_list_size = min(args.dgcg_list_size, ranking_nodes)
             effective_top_k = min(args.dgcg_top_k, correlation_list_size)
@@ -149,6 +154,18 @@ def main() -> None:
                 f"candidatos={effective_candidate_k}, top-k={effective_top_k}, "
                 f"limiar={threshold_description}{weighting_description}."
             )
+            if args.dgcg_reference_train_rankings:
+                print(
+                    "Rankings na validacao/teste: treino + episodio atual; "
+                    f"L={min(args.dgcg_list_size, ranking_nodes + episode_nodes)}. "
+                    "Somente os nos episodicos participam do grafo."
+                )
+            if args.dgcg_extra_references is not None:
+                print(
+                    f"Rankings na validacao/teste: episodio + {args.dgcg_extra_references} extras; "
+                    f"L={min(args.dgcg_list_size, episode_nodes + args.dgcg_extra_references)}. "
+                    "Banco separado de suporte/consultas; sem propagacao nas extras."
+                )
         # Cada variante recebe uma nova instancia com a mesma inicializacao
         # aleatoria, garantida por seed_everything no inicio do laco.
         model = ProtoSGC(
@@ -190,4 +207,15 @@ def main() -> None:
             f"{100 * test_metrics.ci95:.2f}% (IC 95%) | "
             f"loss={test_metrics.loss:.4f}"
         )
+        # Preserva a linha acima: scripts antigos extraem acuracia/loss dela.
+        print(
+            f"    f1_macro={100 * test_metrics.macro_f1:.2f}% +/- {100 * test_metrics.macro_f1_ci95:.2f}% | "
+            f"balanced_accuracy={100 * test_metrics.balanced_accuracy:.2f}% "
+            f"+/- {100 * test_metrics.balanced_accuracy_ci95:.2f}%"
+        )
         print(f"    checkpoint: {checkpoint_path}")
+        print(f"    metricas: {checkpoint_path.with_suffix('.metrics.json')}")
+        graph = test_metrics.graph
+        print(f"    grafo: grau medio={graph['degree_mean']:.3f}; "
+              f"p05-p95=[{graph['degree_p05']:.1f}, {graph['degree_p95']:.1f}]; "
+              f"densidade={graph['density_mean']:.4f}")

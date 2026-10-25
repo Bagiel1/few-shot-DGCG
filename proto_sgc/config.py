@@ -15,6 +15,9 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 # As duas variantes compartilham a mesma topologia; DGCG+ acrescenta pesos.
 DGCG_GRAPH_TYPES = ("dgcg", "dgcg-plus")
 
+# Mutual e reciprocal sao a mesma intersecao; nao duplicar no modo all.
+GRAPH_ALIASES = ("knn-mutual",)
+
 # ``all`` nao aparece aqui porque e uma instrucao para executar, em sequencia,
 # todas as topologias abaixo; ele nao representa uma topologia propriamente dita.
 GRAPH_TYPES = (
@@ -127,12 +130,12 @@ def parse_args() -> argparse.Namespace:
     )
     graph.add_argument(
         "--graph-type",
-        choices=(*GRAPH_TYPES, "all"),
+        choices=(*GRAPH_TYPES, *GRAPH_ALIASES, "all"),
         default="knn-union",
         help=(
             "Variante do grafo: knn-union reproduz o grafo atual (uniao com o "
             "transposto); knn-out usa i->kNN(i); knn-in inverte essas arestas; "
-            "knn-reciprocal mantem apenas vizinhos mutuos; dgcg usa correlacao "
+            "knn-reciprocal (alias knn-mutual) mantem apenas vizinhos mutuos; dgcg usa correlacao "
             "entre listas ranqueadas e limiar guiado por grau; dgcg-plus mantem "
             "essa topologia e pondera as arestas por vizinhanca mutua; all testa "
             "todas."
@@ -212,6 +215,32 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     graph.add_argument(
+        "--dgcg-reference-train-rankings",
+        action="store_true",
+        help=(
+            "Treino: rankings contra todas as imagens de treino. Validacao/teste: "
+            "rankings contra treino + somente o episodio atual. "
+            "Grafo e candidatos continuam episodicos; sem rotulos nas correlacoes."
+        ),
+    )
+    graph.add_argument(
+        "--dgcg-extra-references",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Validacao/teste: N referencias nao rotuladas das classes do episodio, "
+            "reservadas fora de suporte/consultas; somente nos rankings. "
+            "Omitir desativa. N=0 e o controle com o mesmo banco reservado."
+        ),
+    )
+    graph.add_argument(
+        "--dgcg-extra-bank-per-class",
+        type=int,
+        default=20,
+        help="Imagens reservadas por classe na avaliacao com referencias extras (default 20).",
+    )
+    graph.add_argument(
         "--dgcg-correlation",
         choices=DGCG_CORRELATIONS,
         default="rbo",
@@ -221,7 +250,7 @@ def parse_args() -> argparse.Namespace:
         "--dgcg-list-size",
         type=int,
         default=200,
-        help="Tamanho maximo L; sempre limitado ao numero de nos do episodio.",
+        help="Tamanho maximo L; limitado ao universo de imagens usado nos rankings.",
     )
     graph.add_argument(
         "--dgcg-candidate-k",
@@ -303,10 +332,22 @@ def parse_args() -> argparse.Namespace:
 def validate_hyperparameters(args: argparse.Namespace) -> None:
     """Valida relacoes numericas que o argparse nao expressa sozinho."""
 
-    if getattr(args, "dgcg_train_global_rankings", False) and (
+    extra = getattr(args, "dgcg_extra_references", None)
+    if extra is not None:
+        if args.model != "proto-sgc" or args.graph_type not in DGCG_GRAPH_TYPES:
+            raise ValueError("--dgcg-extra-references requer proto-sgc com dgcg ou dgcg-plus.")
+        if extra < 0 or args.dgcg_extra_bank_per_class < 1:
+            raise ValueError("Referencias extras devem ser >= 0; banco por classe deve ser >= 1.")
+        if extra > args.n_way * args.dgcg_extra_bank_per_class:
+            raise ValueError("Referencias extras excedem n-way * dgcg-extra-bank-per-class.")
+        if getattr(args, "dgcg_reference_train_rankings", False):
+            raise ValueError("Escolha referencias extras OU referencias de treino na avaliacao.")
+
+    if (getattr(args, "dgcg_train_global_rankings", False) or
+        getattr(args, "dgcg_reference_train_rankings", False)) and (
         args.model != "proto-sgc" or args.graph_type not in (*DGCG_GRAPH_TYPES, "all")
     ):
-        raise ValueError("--dgcg-train-global-rankings requer proto-sgc com dgcg, dgcg-plus ou all.")
+        raise ValueError("Rankings de treino requerem proto-sgc com dgcg, dgcg-plus ou all.")
     # ``argparse`` valida tipos e escolhas; limites como > 0 precisam ser
     # verificados explicitamente depois da leitura.
     positive_ints = {

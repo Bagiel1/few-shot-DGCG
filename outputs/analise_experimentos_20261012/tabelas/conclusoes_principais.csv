@@ -1,0 +1,7 @@
+questao,resultado
+Grade completa: DGCG versus recíproco,+0.424 pp
+Sem episódios até 6 nós: DGCG versus recíproco,+0.077 pp
+Melhor densidade média por validação,0.125 (67.74% val; 62.64% teste)
+Baseline DGCG 4–6 na varredura,62.35% teste em nove bases
+Ajuste por base: ganho de teste médio,-0.021 pp
+Transferência de alvo entre bases: ganho médio,-0.021 pp

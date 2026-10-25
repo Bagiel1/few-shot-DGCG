@@ -1,0 +1,15 @@
+arquivo,linhas,nao_localizadas,maior_diferenca,coerente
+melhor_baseline_medio.csv,1,0,0.0,True
+melhor_baseline_por_dataset.csv,10,0,0.0,True
+melhores_medios.csv,2,0,2.220446049250313e-16,True
+melhores_medios_por_metodo.csv,3,0,2.220446049250313e-16,True
+melhores_por_dataset.csv,20,0,0.0,True
+melhores_por_dataset_e_metodo.csv,30,0,0.0,True
+melhores_por_nway.csv,90,0,0.0,True
+melhores_por_nway_protocolos.csv,60,0,0.0,True
+ranking_medio.csv,81,0,1.4210854715202004e-14,True
+ranking_medio_protocolos.csv,54,0,1.4210854715202004e-14,True
+melhores_medios_dgcg_protocolo.csv,2,0,0.0,True
+melhores_por_dataset_dgcg_protocolo.csv,9,0,0.0,True
+melhores_por_dataset_e_modo_dgcg_protocolo.csv,18,0,0.0,True
+ranking_medio_dgcg_protocolo.csv,28,0,1.4210854715202004e-14,True

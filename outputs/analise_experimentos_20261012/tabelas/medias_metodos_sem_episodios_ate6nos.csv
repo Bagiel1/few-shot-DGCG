@@ -1,0 +1,5 @@
+metodo,media_teste,media_loss
+knn-in,76.79428,0.6166664
+knn-out,77.91484,0.5907852
+knn-reciprocal,78.33991999999999,0.5699876
+dgcg,78.41724,0.572258
