@@ -550,3 +550,71 @@ grau realizado sair do intervalo. `N = way * (shot + query)`; um intervalo
 e loss agregadas. É necessário reavaliar checkpoints ou gerar novas execuções.
 O PDF anterior não recebeu valores inventados; será atualizado com os novos
 resultados quando a bateria for executada.
+
+## Bateria complementar: densidades x way/shot/query
+
+`buscar_densidades_protocolos.sh` cruza as densidades do DGCG com os mesmos
+27 protocolos (way 2/3/5, shot 1/5/10 e query 1/5/10), nas dez bases Micro,
+split de tamanho fixo 10/5/5 e seed 7. Não muda a bateria de graus nem usa extras.
+
+Densidades padrão: `0.025 0.05 0.075 0.10 0.125 0.15 0.175 0.20 0.25 0.30
+0.40 0.50 0.60 0.75 0.90`. São **4.050 treinamentos DGCG por seed**
+(dez bases × 27 protocolos × 15 densidades), sem repetir kNNs/no-graph.
+Demais hiperparâmetros e contagens de episódios mantêm os defaults anteriores.
+
+```bash
+# Conferência sem baixar/treinar:
+bash buscar_densidades_protocolos.sh --dry-run
+
+# Execução na GPU (preferencialmente depois de terminar a bateria de graus):
+bash buscar_densidades_protocolos.sh --device cuda
+
+# Exemplo menor, com densidades e protocolos personalizados:
+bash buscar_densidades_protocolos.sh --datasets flowers_micro --ways 3 5 --shots 1 5 --queries 1 5 --densities 0.05 0.125 0.25 --quick --output-root runs/densidades_smoke
+
+# Regerar somente CSVs/gráficos e reler a comparação com grau 4-6:
+bash buscar_densidades_protocolos.sh --summarize-only
+```
+
+Saída padrão em `runs/busca_densidades_protocolos/`, com retomada automática,
+manifesto de configuração e log/checkpoint/JSON por execução. `--fail-fast`
+para no primeiro erro; em qualquer falha imprime também o fim do log.
+O shell respeita Conda ativo; outro Python pode ser escolhido com `FDP_PYTHON`.
+
+O cache OpenML é reutilizado. Para evitar reextrair embeddings, o script copia
+os arquivos `features_resnet18_*.pt` de
+`runs/busca_metricas_graus/_work/BASE` para sua própria `_work/BASE` quando
+disponíveis; o extrator continua verificando o fingerprint. Não copia ou
+compartilha os checkpoints/JSONs mutáveis da outra bateria. Altere a origem
+com `--feature-cache-root`. É uma cópia de cache existente, não uma nova
+extração da ResNet. Deixe a extração de origem terminar antes de copiar e
+evite duas baterias simultâneas na mesma GPU.
+
+Métricas: acurácia, F1 macro, acurácia balanceada, seus IC95, loss e estatísticas
+reais de grau/densidade na validação/teste. A densidade fornecida é um
+**alvo**, não garantia de densidade realizada: escores empatados e fallback
+anti-isolamento podem desviá-la, sobretudo em episódios pequenos.
+Com os defaults desta grade, todos os outros nós são candidatos e
+`grau-alvo = rho * (way * (shot + query) - 1)`; o CSV também registra o número
+efetivo de candidatos, o grau equivalente e os desvios da densidade observada.
+
+Saídas principais:
+
+- `resultados_densidades_protocolos.csv`: todas as execuções e métricas.
+- `melhores_densidades_por_protocolo.csv`: escolha de densidade pela maior
+  acurácia de validação em cada base/seed/way/shot/query, somente depois de
+  terminar todos os alvos planejados daquele grupo. Empates são listados;
+  a menor densidade desempata, nunca o teste.
+- `variacao_densidades.csv`: mudanças da escolha ao variar cada eixo,
+  mantendo os demais fixos; amplitude/desvio das densidades escolhidas.
+- `graficos/`: curvas validação/teste por way, mapas shot × query da densidade
+  escolhida por seed e densidade realizada versus tamanho do episódio.
+  Curvas médias usam somente grupos com grade completa.
+
+A comparação com DGCG grau 4–6 lê os `metrics.json` já concluídos em
+`runs/busca_metricas_graus/` (altere com `--baseline-root`). Não treina essa
+baseline outra vez e não grava nada na sua pasta. Se estiver ausente ou tiver
+parâmetros/partições incompatíveis, a comparação fica sinalizada, sem ganho
+calculado. Usa o mesmo protocolo, seed e orçamento de episódios; não mistura
+rodadas `--quick` com completas. A pasta de saída deve ser diferente da pasta
+da bateria de graus. O PDF anterior não é alterado automaticamente.
