@@ -83,6 +83,8 @@ def main() -> None:
             run_name = f"{run_name}+train-global-rankings"
         if args.dgcg_extra_references is not None:
             run_name += f"+extra{args.dgcg_extra_references}-bank{args.dgcg_extra_bank_per_class}"
+        if args.extra_images is not None:
+            run_name += f"+context{args.extra_images}-{args.extra_mode}-{'-'.join(args.extra_phases)}"
         if args.model == "proto-sgc" and args.cosine_rbf_weight:
             run_name = f"{run_name}+cosine-rbf"
         if args.model == "proto-sgc" and args.grande:
@@ -109,18 +111,20 @@ def main() -> None:
             # Estes valores sao apenas descritivos. A classe ProtoSGC refaz os
             # mesmos limites ao construir cada grafo episodico.
             episode_nodes = args.n_way * (args.n_shot + args.n_query)
-            effective_list_size = min(args.dgcg_list_size, episode_nodes)
+            train_extra = (args.extra_images or 0) if 'train' in args.extra_phases else 0
+            train_graph_nodes = episode_nodes + (train_extra if args.extra_mode == 'propagation' else 0)
+            effective_list_size = min(args.dgcg_list_size, train_graph_nodes)
             effective_candidate_k = min(
                 args.dgcg_candidate_k,
                 effective_list_size - 1,
-                episode_nodes - 1,
+                train_graph_nodes - 1,
             )
             # Candidatos continuam locais. Apenas os rankings usados na
             # correlacao podem ter mais itens que o episodio de treino.
             ranking_nodes = (
                 sum(len(features_by_class[name]) for name in splits["train"])
                 if (args.dgcg_train_global_rankings or args.dgcg_reference_train_rankings)
-                else episode_nodes
+                else episode_nodes + train_extra
             )
             correlation_list_size = min(args.dgcg_list_size, ranking_nodes)
             effective_top_k = min(args.dgcg_top_k, correlation_list_size)
@@ -166,6 +170,10 @@ def main() -> None:
                     f"L={min(args.dgcg_list_size, episode_nodes + args.dgcg_extra_references)}. "
                     "Banco separado de suporte/consultas; sem propagacao nas extras."
                 )
+        if args.extra_images is not None:
+            print(f"Protocolo de extras: {args.extra_images} totais, modo={args.extra_mode}, "
+                  f"fases={','.join(args.extra_phases)}; reserva={args.extra_bank_per_class}/classe "
+                  "em TODOS os splits para manter suporte/query pareados.")
         # Cada variante recebe uma nova instancia com a mesma inicializacao
         # aleatoria, garantida por seed_everything no inicio do laco.
         model = ProtoSGC(

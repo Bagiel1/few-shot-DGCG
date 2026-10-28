@@ -241,6 +241,23 @@ def parse_args() -> argparse.Namespace:
         help="Imagens reservadas por classe na avaliacao com referencias extras (default 20).",
     )
     graph.add_argument(
+        "--extra-images", type=int, default=None, metavar="N",
+        help="Novo protocolo: N extras totais por episodio. 0 reserva os mesmos bancos sem usar extras.",
+    )
+    graph.add_argument(
+        "--extra-mode", choices=("rankings", "propagation"), default="rankings",
+        help="rankings: somente correlacoes DGCG; propagation: extras tambem sao nos do grafo.",
+    )
+    graph.add_argument(
+        "--extra-phases", nargs="+", choices=("train", "val", "test"),
+        default=["train", "val", "test"],
+        help="Fases que usam extras. Bancos separados por split; nunca mistura classes entre fases.",
+    )
+    graph.add_argument(
+        "--extra-bank-per-class", type=int, default=20,
+        help="Reserva fixa por classe nas TRES fases, inclusive controles/fases sem extras (default 20).",
+    )
+    graph.add_argument(
         "--dgcg-correlation",
         choices=DGCG_CORRELATIONS,
         default="rbo",
@@ -332,6 +349,21 @@ def parse_args() -> argparse.Namespace:
 def validate_hyperparameters(args: argparse.Namespace) -> None:
     """Valida relacoes numericas que o argparse nao expressa sozinho."""
 
+    context_count = getattr(args, "extra_images", None)
+    if context_count is not None:
+        if context_count < 0 or args.extra_bank_per_class < 1:
+            raise ValueError("extra-images deve ser >= 0 e extra-bank-per-class >= 1.")
+        if context_count > args.n_way * args.extra_bank_per_class:
+            raise ValueError("Extras excedem n-way * extra-bank-per-class.")
+        if len(set(args.extra_phases)) != len(args.extra_phases):
+            raise ValueError("extra-phases nao aceita fases repetidas.")
+        if (getattr(args, "dgcg_extra_references", None) is not None
+                or args.dgcg_train_global_rankings or args.dgcg_reference_train_rankings):
+            raise ValueError("Nao misture --extra-images com os modos legados de referencias/rankings globais.")
+        if context_count and args.model != "proto-sgc":
+            raise ValueError("Extras positivas requerem proto-sgc; no-graph aceita apenas --extra-images 0.")
+        if context_count and args.extra_mode == "rankings" and args.graph_type not in DGCG_GRAPH_TYPES:
+            raise ValueError("Extras somente nos rankings requerem dgcg ou dgcg-plus.")
     extra = getattr(args, "dgcg_extra_references", None)
     if extra is not None:
         if args.model != "proto-sgc" or args.graph_type not in DGCG_GRAPH_TYPES:

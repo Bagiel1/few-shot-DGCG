@@ -1,0 +1,102 @@
+[
+  {
+    "name": "01_medias_novas",
+    "title": "Metodos - acuracia e F1 macro",
+    "caption": "Dez bases. Escolhas de grau/densidade feitas pela validacao em cada base/protocolo."
+  },
+  {
+    "name": "test_accuracy_bases",
+    "title": "Acuracia por base - seis metodos",
+    "caption": "Media dos mesmos 27 protocolos; DGCG com alvo 4-6. Sem escolha de shot/query pelo teste."
+  },
+  {
+    "name": "test_macro_f1_bases",
+    "title": "F1 macro por base - seis metodos",
+    "caption": "Media dos mesmos 27 protocolos; DGCG com alvo 4-6. Sem escolha de shot/query pelo teste."
+  },
+  {
+    "name": "04_grau_por_way",
+    "title": "Grau-alvo - resposta por n-way",
+    "caption": "Dez bases; medias balanceadas em shot/query. Intervalos aplicados no treino, validacao e teste."
+  },
+  {
+    "name": "05_densidade_corte0",
+    "title": "Densidade - resposta por n-way",
+    "caption": "Dez bases; mesmas combinacoes por alvo. Teste descritivo, nao usado para escolher a densidade."
+  },
+  {
+    "name": "05_densidade_corte6",
+    "title": "Densidade - resposta por n-way (N > 6)",
+    "caption": "Dez bases; mesmas combinacoes por alvo. Teste descritivo, nao usado para escolher a densidade."
+  },
+  {
+    "name": "06_alvo_real",
+    "title": "Densidade-alvo versus densidade realizada",
+    "caption": "Media por tamanho do episodio. Empates e fallback anti-isolamento afastam o resultado do alvo."
+  },
+  {
+    "name": "07_ganhos_base",
+    "title": "Densidade escolhida versus DGCG 4-6",
+    "caption": "Escolha local pela validacao; compara os mesmos protocolos. As duas barras usam conjuntos de tamanhos diferentes."
+  },
+  {
+    "name": "08_frequencia",
+    "title": "Frequencia das escolhas na validacao",
+    "caption": "Empates: prefere 4-6 entre graus; menor rho entre densidades. Frequencia nao significa otimo unico."
+  },
+  {
+    "name": "09_grau_real",
+    "title": "DGCG 4-6 - grau e densidade realizados",
+    "caption": "Topologia antes de autolacos e normalizacao. Medias sobre bases/protocolos com o mesmo tamanho."
+  },
+  {
+    "name": "base_escolhas_bacteria_micro",
+    "title": "Bacteria - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_birds_micro",
+    "title": "Birds - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_cars_micro",
+    "title": "Cars - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_flowers_micro",
+    "title": "Flowers - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_manufacturing_micro",
+    "title": "Manufacturing - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_plankton_micro",
+    "title": "Plankton - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_plant_village_micro",
+    "title": "Plant Village - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_resisc_micro",
+    "title": "RESISC - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_sports_micro",
+    "title": "Sports - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  },
+  {
+    "name": "base_escolhas_textures_micro",
+    "title": "Textures - escolhas por protocolo",
+    "caption": "Maior validacao; empates resolvidos por regra fixa. Valores das celulas sao alvos, nao graus/densidades realizados."
+  }
+]

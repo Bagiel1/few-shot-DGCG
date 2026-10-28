@@ -173,6 +173,7 @@ class ProtoSGC(nn.Module):
         n_way: int,
         *,
         dgcg_correlations: torch.Tensor | None = None,
+        extra_x: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Constroi prototipos do suporte e devolve logits para as consultas.
 
@@ -182,13 +183,24 @@ class ProtoSGC(nn.Module):
         """
 
         n_support = support_x.shape[0]
+        n_query = query_x.shape[0]
+        episode_features = torch.cat((support_x, query_x), dim=0)
+        if extra_x is not None:
+            if extra_x.ndim != 2 or extra_x.shape[1] != episode_features.shape[1]:
+                raise ValueError("Extras devem ter a mesma dimensao dos embeddings do episodio.")
+            if len(extra_x):
+                if self.model_name != "proto-sgc":
+                    raise ValueError("No-graph nao propaga informacao de extras.")
+                episode_features = torch.cat((episode_features, extra_x.to(episode_features)), dim=0)
 
         # A concatenacao e necessaria para construir um unico grafo transdutivo.
         # A matriz opcional vem dos rankings de treino; nao contem rotulos.
         graph_options = {} if dgcg_correlations is None else {"dgcg_correlations": dgcg_correlations}
-        embeddings = self.encode_episode(torch.cat((support_x, query_x), dim=0), **graph_options)
+        embeddings = self.encode_episode(episode_features, **graph_options)
         support_embeddings = embeddings[:n_support]
-        query_embeddings = embeddings[n_support:]
+        # Extras recebem/enviam atributos, mas nao viram suporte rotulado nem
+        # queries: nao recebem loss propria, pseudorrotulos ou metricas.
+        query_embeddings = embeddings[n_support:n_support + n_query]
 
         # Prototipo da classe = centroide dos exemplos de suporte dessa classe.
         prototypes = []

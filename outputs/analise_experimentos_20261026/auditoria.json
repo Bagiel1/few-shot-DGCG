@@ -1,0 +1,28 @@
+{
+  "arquivos_sha256": {
+    "resultados_metricas.csv": "6fbe5683ff62b970664928414beaafafbc6d652b2394ab80e2e55d27b8007e28",
+    "melhores_graus_por_protocolo_metricas.csv": "21683beb54bae4cad1beb5e20dab8f1095a5f8306cfee115dfeb48c8c6632dbd",
+    "variacao_intervalos_metricas.csv": "e066b9b2e56bdb88fe901b74a5014986a830d29cc59b4274c95c059dd54fb247",
+    "resultados_densidades_protocolos_dgcg.csv": "e4a179e0628ce4458d07b6bcc5d6b7fecccdf012ed43f62f2c4e42cd03b3d3e0",
+    "melhores_densidades_por_protocolo_dgcg.csv": "a06758cd71b7bbaea7420de31577b92cf19f63312a29da3d1922f49dd18a6716",
+    "variacao_densidades_dgcg.csv": "1b3fffde563241295b8e2d2ebe869e53e55a5c4498d2239ec8f1d5f67dda09e2"
+  },
+  "linhas_metodos": 2430,
+  "linhas_densidades": 4050,
+  "metodos": [
+    "knn-in",
+    "knn-out",
+    "knn-mutual",
+    "knn-union",
+    "no-graph",
+    "dgcg"
+  ],
+  "seeds": [
+    7
+  ],
+  "grupos_por_bateria": 270,
+  "validacao_episodios": 200,
+  "teste_episodios": 1000,
+  "duplicatas": 0,
+  "grupos_incompletos": 0
+}

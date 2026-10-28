@@ -1,0 +1,297 @@
+[
+  {
+    "page": 1,
+    "title": "Few-shot DGCG - resultados consolidados",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 2,
+    "title": "Auditoria e comparacao por n-way",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 3,
+    "title": "Acuracia por base - metodos e ajustes",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 4,
+    "title": "F1 macro por base - metodos e ajustes",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 5,
+    "title": "DGCG - intervalos de grau e variacao",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 6,
+    "title": "DGCG - ranking das densidades",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 7,
+    "title": "Sensibilidade ao tamanho do episodio",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 8,
+    "title": "Protocolo fixo - 5-way / 1-shot / 5-query",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 9,
+    "title": "Flowers Micro - referencias e contextos separados",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 10,
+    "title": "Densidade solicitada e realizada",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 11,
+    "title": "Metodos - acuracia e F1 macro",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 12,
+    "title": "Acuracia por base - seis metodos",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 13,
+    "title": "F1 macro por base - seis metodos",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 14,
+    "title": "Grau-alvo - resposta por n-way",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 15,
+    "title": "Densidade - resposta por n-way",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 16,
+    "title": "Densidade - resposta por n-way (N > 6)",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 17,
+    "title": "Densidade-alvo versus densidade realizada",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 18,
+    "title": "Densidade escolhida versus DGCG 4-6",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 19,
+    "title": "Frequencia das escolhas na validacao",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 20,
+    "title": "DGCG 4-6 - grau e densidade realizados",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 21,
+    "title": "Bacteria - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 22,
+    "title": "Birds - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 23,
+    "title": "Cars - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 24,
+    "title": "Flowers - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 25,
+    "title": "Manufacturing - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 26,
+    "title": "Plankton - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 27,
+    "title": "Plant Village - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 28,
+    "title": "RESISC - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 29,
+    "title": "Sports - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 30,
+    "title": "Textures - escolhas por protocolo",
+    "section": "Resultados atuais"
+  },
+  {
+    "page": 31,
+    "title": "Historico - Medias dos metodos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 32,
+    "title": "Historico - Metodos por base",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 33,
+    "title": "Historico - Diferenca para kNN-in",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 34,
+    "title": "Historico - Protocolo fixo",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 35,
+    "title": "Historico - Selecao de shot/query",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 36,
+    "title": "Historico - Protocolos 2-way",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 37,
+    "title": "Historico - Protocolos 3-way",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 38,
+    "title": "Historico - Protocolos 5-way",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 39,
+    "title": "Historico - Efeito de n-query",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 40,
+    "title": "Historico - Efeito de n-shot",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 41,
+    "title": "Historico - Validacao menos teste",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 42,
+    "title": "Historico - Loss e acuracia",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 43,
+    "title": "Historico - Grau e densidade - medias",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 44,
+    "title": "Historico - Densidade - validacao por base",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 45,
+    "title": "Historico - Grau - validacao por base",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 46,
+    "title": "Historico - Ajuste versus grau 4-6",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 47,
+    "title": "Historico - DGCG ajustado e baselines",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 48,
+    "title": "Historico - Imagens por episodio",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 49,
+    "title": "Historico - Bacteria - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 50,
+    "title": "Historico - Birds - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 51,
+    "title": "Historico - Cars - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 52,
+    "title": "Historico - Flowers - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 53,
+    "title": "Historico - Manufacturing - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 54,
+    "title": "Historico - Plankton - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 55,
+    "title": "Historico - Plant Village - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 56,
+    "title": "Historico - RESISC - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 57,
+    "title": "Historico - Sports - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 58,
+    "title": "Historico - Textures - protocolos",
+    "section": "Historico 12/10/2026"
+  },
+  {
+    "page": 59,
+    "title": "Fontes e limites da comparacao",
+    "section": "Resultados atuais"
+  }
+]

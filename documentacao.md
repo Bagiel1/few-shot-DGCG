@@ -209,7 +209,127 @@ não restaura a ponderação exponencial do antigo script dos Downloads.
 No simulador, use o seletor **Métrica dos vizinhos kNN**. Checkpoints kNN por
 cosseno recebem o sufixo `cosine` para distinguir as duas configurações.
 
-## Referencias extras reservadas, sem aumentar o grafo
+## Bateria de extras por fase: rankings ou propagacao
+
+Nova entrada: `bash buscar_extras.sh --device cuda`. Nao altera os defaults
+das baterias anteriores. Sem as novas flags, o modelo continua episodico.
+
+O padrao e **2-way, 10-shot, 10-query**, escolhido pela maior media de acuracia
+de validacao nos 27 protocolos, 10 bases e sete configuracoes: quatro kNNs,
+no-graph e DGCG 2-4/4-6. A fonte e `resultados_metricas.csv` (2.430 linhas,
+seed 7), media de validacao 92,155%. Isso nao torna 2-way comparavel em
+dificuldade a 5-way. Dentro de 5-way, 10-shot/10-query tambem teve a maior
+media nesse criterio. O manifesto guarda criterio e SHA256 da fonte.
+
+O bash usa 10 extras **por classe** (20 totais com 2-way), reserva fixa de
+20 imagens/classe em cada split, kNN k=5, seed 7 e treino/val/teste de
+2000/200/1000 episodios. As extras sao balanceadas pelas classes do episodio;
+seus rotulos servem somente ao amostrador, nunca ao modelo. Nao ha distratoras
+nem pseudorrotulos neste experimento.
+
+Fases da bateria (`--phases`):
+
+| Valor | Onde as extras sao usadas |
+| --- | --- |
+| `train` | Somente treino |
+| `val` | Somente validacao |
+| `test` | Somente teste |
+| `train-val` | Treino e validacao |
+| `all` | Treino, validacao e teste |
+
+`all` **nao mistura os conjuntos**: cada fase recebe extras apenas de suas
+proprias classes. Em todas as condicoes, mesmo nas fases sem extras, o banco
+fica reservado fora de suporte/query. Assim, mesmos seed/protocolo/banco
+produzem os mesmos episodios, independentemente do modo, fase ou quantidade.
+Os prefixos do mesmo banco fixo geram as extras; nao ha sorteio novo que
+altere o estado aleatorio do amostrador de episodios.
+
+Modos (`--modes`):
+
+- `rankings`: somente DGCG. Rankings contra suporte + query + extras;
+  correlacoes, candidatos e grafo final somente entre suporte + query.
+- `propagation`: DGCG e kNN. Grafo e propagacao incluem suporte + query +
+  extras. Prototipos continuam usando somente o suporte rotulado; logits,
+  loss e metricas usam somente as queries. As extras nao recebem loss propria.
+
+As duas variantes DGCG usam alvo de grau **2-4 e 4-6**, nao densidade fixa.
+O numero de nos aumenta no modo propagation; graus e densidades realizados
+sao registrados antes dos autolacos/normalizacao. `episode_nodes` no CSV
+conta suporte+query; `val_nodes_per_episode` e `test_nodes_per_episode` contam
+os nos reais do grafo, incluindo extras quando habilitadas. L=200 e top-k=40
+permanecem iguais aos defaults; a lista efetiva e limitada pelo universo.
+
+Por base e seed, sao 47 execucoes:
+
+- 7 controles sem extras: quatro kNNs, no-graph, DGCG 2-4 e DGCG 4-6.
+- 20 variantes DGCG: dois intervalos x dois modos x cinco combinacoes de fases.
+- 20 variantes kNN: quatro tipos x propagacao x cinco combinacoes de fases.
+
+Total padrao: **470 execucoes nas dez bases**. No-graph fica apenas no controle;
+nao ha propagacao nem correlacao de rankings para habilitar nele. Os kNNs nao
+sao duplicados em modo rankings, que nao faz parte desses baselines.
+
+```bash
+# Conferir comandos sem baixar dados ou treinar.
+bash buscar_extras.sh --dry-run
+
+# Bateria completa na VM; retoma resultados ja concluidos.
+bash buscar_extras.sh --device cuda
+
+# Mesmo teste em 5-way, com pasta separada (50 extras totais).
+bash buscar_extras.sh --device cuda --n-way 5 --output-root runs/extras_5way
+
+# Comparar 5, 10 e 20 extras/classe; controles nao sao duplicados (1.270 runs).
+bash buscar_extras.sh --device cuda --extras-per-class 5 10 20 \
+  --output-root runs/extras_quantidades
+
+# Somente DGCG, extras no treino e na validacao, propagando.
+bash buscar_extras.sh --device cuda --methods dgcg --modes propagation \
+  --phases train-val --output-root runs/extras_dgcg_train_val
+
+# Teste rapido, em pasta independente dos resultados finais.
+bash buscar_extras.sh --datasets flowers_micro --quick --output-root runs/extras_smoke
+
+# Regerar CSVs sem repetir treinamentos; nao precisa de matplotlib.
+bash buscar_extras.sh --summarize-only --output-root runs/busca_extras
+```
+
+Resultados em `runs/busca_extras/`: `resultados.csv` (acuracia, F1 macro,
+acuracia balanceada, ICs, loss, topologia e ganhos contra o controle pareado),
+`medias.csv` (descritivas, com quantidade concluida/planejada), `status.csv`
+e `manifest.json`. Cada execucao tem `run.log`, `command.json`,
+`status.json`, `checkpoint.pt` e `metrics.json`, incluindo IDs dos bancos.
+As medias nao selecionam o melhor pelo teste. Test-only nao altera treino
+nem selecao do checkpoint; val-only pode mudar qual checkpoint e selecionado.
+
+Os arquivos individuais sao salvos a cada conclusao. Ctrl+C preserva os
+concluidos; a proxima chamada identica pula esses casos e refaz os restantes.
+Nao ha retomada dentro de um treinamento interrompido. Mudancas de parametros
+ou codigo exigem outra pasta para evitar mistura. Embeddings sao reutilizados
+em `OUTPUT/_work/BASE`, sem copia por condicao; `--work-root` permite escolher
+outra pasta compartilhada, e o cache existente e validado pelo fingerprint.
+Nao execute duas baterias simultaneas com o mesmo work-root.
+
+Para uma chamada individual, `--extra-images` recebe o **total**, diferentemente
+de `--extras-per-class` do bash:
+
+```bash
+python protosgc_fewshot.py --graph-type dgcg --dgcg-target-degree 2 4 \
+  --n-way 2 --n-shot 10 --n-query 10 --extra-images 20 \
+  --extra-mode propagation --extra-phases train val \
+  --extra-bank-per-class 20 --device cuda --work-dir runs/extras_individual
+```
+
+`--extra-images 0` reserva todos os bancos e nao usa extras, inclusive no
+no-graph. Omitir a flag nao reserva bancos: nao e o mesmo controle.
+O novo protocolo nao combina com `--dgcg-extra-references`,
+`--dgcg-train-global-rankings` ou `--dgcg-reference-train-rankings`.
+Nas bases Micro, banco + shot + query deve caber nas 40 imagens por classe;
+nao ha amostragem com reposicao para contornar falta de imagens.
+Resultados com extras sao um protocolo semissupervisionado/transdutivo e
+devem ser identificados como tal, nao como o protocolo episodico sem extras.
+
+## Referencias extras reservadas, sem aumentar o grafo (modo legado)
 
 Experimento opcional para controlar quantas imagens nao rotuladas das mesmas
 classes entram somente nos rankings durante validacao e teste:

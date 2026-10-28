@@ -40,6 +40,44 @@ class Metrics:
     graph: dict | None = None
 
 
+def extra_graph_options(model, episode, bank, mode="rankings"):
+    """Nao recebe rotulos das extras; preserva a ordem suporte/query/extra."""
+    if mode not in ("rankings", "propagation"):
+        raise ValueError("Modo de extras desconhecido.")
+    if bank is None or not bank.count:
+        return {}
+    extras = bank.extra_features(episode).to(episode.support_x)
+    if mode == "propagation":
+        return {"extra_x": extras}
+    if model.model_name != "proto-sgc" or model.graph_type not in DGCG_GRAPH_TYPES:
+        raise ValueError("Extras somente nos rankings requerem DGCG.")
+    rankings = build_reference_ranked_lists(
+        torch.cat((episode.support_x, episode.query_x)), extras,
+        list_size=model.dgcg_list_size, metric=model.dgcg_metric,
+    )
+    return {"dgcg_correlations": dgcg_correlation_matrix(
+        rankings, correlation=model.dgcg_correlation, top_k=model.dgcg_top_k,
+        rbo_p=model.dgcg_rbo_p, dtype=model.theta.weight.dtype,
+    )}
+
+
+def prepare_extra_banks(sampler, splits, args):
+    """Reserva todas as fases para comparacoes pareadas; usa so as habilitadas."""
+    count = getattr(args, "extra_images", None)
+    if count is None:
+        return None
+    all_classes = [label for phase in ("train", "val", "test") for label in splits[phase]]
+    if len(set(all_classes)) != len(all_classes):
+        raise ValueError("Classes de treino, validacao e teste devem ser disjuntas.")
+    return {
+        phase: ExtraReferenceBank(
+            sampler, splits[phase], count=count if phase in args.extra_phases else 0,
+            per_class=args.extra_bank_per_class, seed=args.seed + offset,
+        )
+        for phase, offset in [("train", 4101), ("val", 4202), ("test", 4303)]
+    }
+
+
 @torch.no_grad()
 def evaluate(model, *args, **kwargs):
     # Restaura o observador mesmo se a avaliacao falhar.
@@ -58,6 +96,7 @@ def _evaluate(
     *,
     training_rankings: TrainingRankings | None = None,
     extra_reference_bank: ExtraReferenceBank | None = None,
+    extra_mode: str = "rankings",
     graph_statistics=None,
 ) -> Metrics:
     """Avalia o modelo em episodios reproduziveis, sem calcular gradientes.
@@ -84,17 +123,7 @@ def _evaluate(
         sampled = (extra_reference_bank.sample(rng) if extra_reference_bank is not None
                    else sampler.sample(allowed_classes, rng))
         episode = episode_to_device(sampled, device)
-        graph_options = {}
-        if extra_reference_bank is not None and extra_reference_bank.count:
-            rankings = build_reference_ranked_lists(
-                torch.cat((episode.support_x, episode.query_x)),
-                extra_reference_bank.extra_features(episode),
-                list_size=model.dgcg_list_size, metric=model.dgcg_metric,
-            )
-            graph_options["dgcg_correlations"] = dgcg_correlation_matrix(
-                rankings, correlation=model.dgcg_correlation, top_k=model.dgcg_top_k,
-                rbo_p=model.dgcg_rbo_p, dtype=model.theta.weight.dtype,
-            )
+        graph_options = extra_graph_options(model, episode, extra_reference_bank, extra_mode)
         if training_rankings is not None:
             if any(item in training_rankings.row_by_id for item in episode.sample_ids):
                 raise ValueError("Avaliacao de referencia requer episodio disjunto do treino.")
@@ -157,7 +186,16 @@ def train_model(
 
     model.to(device)
     extra_count = getattr(args, "dgcg_extra_references", None)
-    val_bank = test_bank = None
+    train_bank = val_bank = test_bank = None
+    context_banks = prepare_extra_banks(sampler, splits, args)
+    extra_mode = args.extra_mode if context_banks is not None else "rankings"
+    if context_banks is not None:
+        train_bank, val_bank, test_bank = (context_banks[p] for p in ("train", "val", "test"))
+        print(f"Extras: modo={extra_mode}; fases={','.join(args.extra_phases)}; "
+              f"totais efetivos por episodio="
+              f"{ {p: b.count for p, b in context_banks.items()} }; "
+              f"reserva={args.extra_bank_per_class}/classe em cada split. "
+              "Sem rotulos extras, sem pseudorrotulos, loss/metricas somente nas queries.")
     if extra_count is not None:
         val_bank = ExtraReferenceBank(sampler, splits["val"], count=extra_count,
                                      per_class=args.dgcg_extra_bank_per_class, seed=args.seed + 4202)
@@ -234,6 +272,10 @@ def train_model(
         graph_suffix = f"{graph_suffix}-train-global-rankings"
     if extra_count is not None:
         graph_suffix += f"-extra{extra_count}-bank{args.dgcg_extra_bank_per_class}"
+    if context_banks is not None:
+        phases_tag = '-'.join(p for p in ("train", "val", "test") if p in args.extra_phases)
+        graph_suffix += (f"-context{args.extra_images}-{extra_mode}-{phases_tag}"
+                         f"-bank{args.extra_bank_per_class}")
     checkpoint_path = args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
     # As medias moveis abaixo sao apenas para a barra de progresso; elas nao
     # interferem na loss otimizada nem na escolha do checkpoint.
@@ -245,8 +287,10 @@ def train_model(
         model.train()
 
         # Cada iteracao do otimizador corresponde a um novo episodio few-shot.
-        episode = episode_to_device(sampler.sample(splits["train"], train_rng), device)
-        graph_options = {}
+        sampled = (train_bank.sample(train_rng) if train_bank is not None
+                   else sampler.sample(splits["train"], train_rng))
+        episode = episode_to_device(sampled, device)
+        graph_options = extra_graph_options(model, episode, train_bank, extra_mode)
         if training_rankings is not None:
             graph_options["dgcg_correlations"] = training_rankings.correlations(
                 episode.sample_ids,
@@ -295,6 +339,7 @@ def train_model(
                 seed=args.seed + 202,
                 training_rankings=training_rankings if reference_evaluation else None,
                 extra_reference_bank=val_bank,
+                extra_mode=extra_mode,
             )
             print(
                 f"\nEp. {episode_index:4d} | validacao: "
@@ -317,6 +362,8 @@ def train_model(
                         "class_splits": splits,
                         "validation": asdict(val_metrics),
                         "extra_reference_banks": (
+                            {p: b.metadata() for p, b in context_banks.items()}
+                            if context_banks is not None else
                             {"val":val_bank.metadata(), "test":test_bank.metadata()}
                             if val_bank is not None else None
                         ),
@@ -336,6 +383,7 @@ def train_model(
         seed=args.seed + 303,
         training_rankings=training_rankings if reference_evaluation else None,
         extra_reference_bank=test_bank,
+        extra_mode=extra_mode,
     )
     # Saida estruturada: dispensa extrair metricas de barras de progresso/logs.
     result = {
@@ -347,6 +395,14 @@ def train_model(
         "metric_aggregation": "mean_per_episode; values in [0,1]; normal CI95 across episodes",
         "graph_definition": "nonzero neighbors per adjacency row before self-loops and normalization",
         "validation": asdict(best_val_metrics), "test": asdict(test_metrics),
+        "extra_context": ({
+            "mode": extra_mode, "phases": args.extra_phases,
+            "requested_total": args.extra_images,
+            "banks": {p: b.metadata() for p, b in context_banks.items()},
+            "labels_exposed_to_model": False, "pseudo_labels": False,
+            "sampling": "same_episode_classes_balanced; labels_used_only_by_sampler",
+            "supervision_and_metrics": "query_only; prototypes_from_support_only",
+        } if context_banks is not None else None),
     }
     checkpoint_path.with_suffix(".metrics.json").write_text(
         json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8",
