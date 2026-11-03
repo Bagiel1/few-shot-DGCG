@@ -1,0 +1,4 @@
+work/
+feats/
+*.err
+__pycache__/
