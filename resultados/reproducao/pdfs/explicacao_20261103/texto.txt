@@ -1,0 +1,772 @@
+ 01 / GUIA DE LEITURA DOS EXPERIMENTOS
+
+
+ O que está acontecendo com o
+ few-shot?
+ O treino não falhou em geral; o efeito muda com o método, a base e a forma
+ de iniciar a representação..
+
+ Gabriel • análise dos arquivos disponíveis em 03/11/2026.. Este guia reúne os testes recentes
+ do Claude e os conecta ao histórico, às escalas e aos extras.. O objetivo é entender os
+ resultados e separar o que foi medido do que ainda é hipótese..
+
+  Pergunta                        Resposta que os dados sustentam
+
+
+  Os novos resultados batem com   Sim, aproximadamente nas configurações correspondentes; há diferenças pontuais
+  os antigos?                     de até 1,13 pp nos grafos DGCG..
+
+
+  Treinar piora?                  O no-graph padrão perde na média; os grafos ganham com treino.. Com identidade
+                                  512 + treino, o no-graph melhora na média sobre identidade sem treino..
+
+
+  O grafo faz sentido?            No 1-shot, sim, com ganho médio expressivo; no 5-shot, vários grafos prejudicam
+                                  uma representação já forte..
+
+
+  O adaptativo é a solução?       Recupera o prejuízo da propagação, mas ainda não demonstra ganho sobre o
+                                  baseline sem grafo..
+
+
+  Qual caminho parece             Fortalecer os controles e medir utilidade da propagação, sem compromisso de usar
+  promissor?                      DGCG..
+
+
+ Roteiro: páginas 2–4 explicam protocolo e reprodução; 5–9 tratam de treino e representação;
+ 10–13 de grafos; 14–17 de homofilia e adaptação; 18–19 retomam escalas e extras; 20–23
+ organizam hipóteses, próximos testes e fontes..
+
+ Como ler números: 76,10% é acurácia; passar de 73,45% para 76,10% é ganhar 2,65 pontos
+ percentuais (pp), não 2,65% relativo.. As médias dos testes recentes dão o mesmo peso a cada
+ uma das dez bases..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                                    01
+ 02 / PROTOCOLO
+
+
+ Antes dos resultados: qual problema
+ foi testado?
+  Peça                        Significado neste projeto
+
+
+  5-way                       Cada episódio contém cinco classes; acertar ao acaso daria 20% de acurácia..
+
+
+  1-shot / 5-shot             Uma ou cinco imagens rotuladas de suporte por classe..
+
+
+  10-query                    Dez imagens a classificar por classe: 50 queries por episódio..
+
+
+  Grafo transdutivo           Suportes e queries participam do mesmo grafo; os rótulos das queries não são
+                              usados na predição..
+
+
+  55 / 75 nós                 5 × (1 + 10) = 55; 5 × (5 + 10) = 75.. Sem extras..
+
+
+  Micro                       20 classes, 40 imagens por classe; split desta bateria: 10 classes de treino, 5 de
+                              validação e 5 de teste..
+
+
+ O caminho de uma previsão
+
+ Imagem → ResNet-18 pré-treinada em ImageNet e congelada → vetor de 512 valores →
+ eventual pré-processamento → grafo e propagação → projeção Θ → LayerNorm → normalização
+ L2 → comparação com o protótipo de cada classe..
+
+ O protótipo é a média das representações dos suportes daquela classe.. A query recebe a
+ classe com menor distância ao protótipo.. O grafo pode ajudar trazendo contexto de outras
+ imagens, mas uma ligação errada também pode aproximar classes diferentes..
+
+ O que é treinado: a projeção Θ, os parâmetros afins da LayerNorm e a escala dos logits.. A
+ ResNet fica congelada.. Portanto, este é um treino episódico de uma cabeça sobre features
+ prontas; não é um teste de toda forma possível de meta-aprendizado ou de fine-tuning da rede..
+
+ Mais dados no conjunto não significam mais nós no episódio.. O orçamento
+ do episódio é uma escolha separada..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                                       02
+ 03 / INVENTÁRIO AUDITÁVEL
+
+
+ O que terminou — e o que não
+ chegou a rodar
+  Arquivo                      Linhas   O que compara
+
+
+  res_e1.jsonl                 360      3 métodos × 2 shots × 3 pré-processamentos × com/sem treino × 10
+                                        bases
+
+
+  res_dgcg24.jsonl             80       DGCG 2–4, raw/CL2N, com/sem treino
+
+
+  res_idinit.jsonl             60       Treino iniciado na identidade 512, três métodos
+
+
+  res_proptf.jsonl             200      Saltos e mistura com identidade, sem treino
+
+
+  res_topo_tf.jsonl            360      18 configurações de topologia, dois shots
+
+
+  res_topo_tr.jsonl            40       RBF cosseno com treino: union e DGCG
+
+
+  res_adapt.jsonl              40       Dois grafos × dois pares de limiares, 5-shot
+
+
+  res_supproxy.json            20       Diagnóstico por base/método, não treino de modelos
+
+
+ São 1.240 linhas de resultados e 20 registros de diagnóstico nesta fotografia dos arquivos..
+ Algumas linhas repetem controles entre arquivos; isso não representa 1.240 repetições
+ independentes.. Todos os novos resultados usam seed 7, ResNet-18 a 128 px e CPU, conforme
+ configuração e origem informadas..
+
+ O RBF cosseno com treino e o adaptativo estão completos para suas grades efetivamente
+ executadas.. RBO² com treino e DGCG+ com treino não rodaram: o filtro da grade não
+ correspondeu às variantes planejadas.. Ausência de resultado não é derrota do método..
+
+ Treino padrão: 2.000 episódios; validação com 200 episódios a cada 200; teste com 1.000
+ episódios.. Os resultados de escalas, à parte, têm três seeds: 7, 17 e 27..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                               03
+ 04 / REPRODUÇÃO DO HISTÓRICO
+
+
+ CPU local e GPU da VM: os
+ resultados se reconhecem
+
+
+
+
+ Como ler: à esquerda, cada ponto é uma configuração correspondente; a diagonal representa
+ resultados idênticos.. À direita, zero significa ausência de diferença entre Claude e histórico..
+ Cada método reúne 20 pares: dez bases × dois shots..
+
+ Nos 80 pares, a diferença absoluta média é 0,119 pp.. As maiores diferenças absolutas são
+ 0,072 pp no no-graph, 0,078 no union, 1,134 no DGCG 4–6 e 1,014 no DGCG 2–4.. As
+ conclusões gerais são compatíveis, mas não há igualdade numérica completa..
+
+ Hipótese: diferenças numéricas, bibliotecas e desempates em rankings podem afetar mais um
+ grafo discreto.. Porém, CPU/GPU não foi isolado experimentalmente; não podemos atribuir toda
+ diferença ao dispositivo.. Isso exigiria mesmas features, episódios, código e configuração em
+ ambos os ambientes..
+
+ O contraste “com treino × sem treino” do Claude ocorre dentro da CPU.. A
+ troca de dispositivo não explica esse contraste interno..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                         04
+ 05 / VISÃO GERAL
+
+
+ Treinar ajuda o grafo, mas piora o
+ no-graph padrão
+
+
+
+
+ Como ler: compare as duas barras do mesmo método, dentro do mesmo shot.. O eixo começa
+ em 50% para facilitar a comparação; diferenças devem ser lidas pelos valores, não pela
+ proporção visual da altura..
+
+ No 1-shot, o treino padrão muda o no-graph em −0,75 pp, union em +1,12 pp e DGCG 4–6 em
+ +0,71 pp.. No 5-shot, os efeitos são −2,45 pp, +1,39 pp e +1,30 pp, respectivamente..
+ Portanto, “treino não ajuda” não descreve os três métodos..
+
+ Sem treino, union ganha 4,62 pp sobre no-graph no 1-shot, mas perde 2,65 pp no 5-shot.. Com
+ um único suporte por classe, contexto adicional pode ajudar a estimar a classe; com cinco, o
+ protótipo inicial é mais bem estimado e a mistura pode trazer mais erro do que informação útil..
+ Essa explicação é plausível, não uma causa já demonstrada..
+
+ A conclusão válida é sobre a configuração testada.. A comparação padrão
+ ainda mistura efeito do treino, dimensão e inicialização..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                    05
+ 06 / RESULTADOS POR BASE
+
+
+ 1-shot: a média esconde ganhos e
+ perdas grandes
+
+
+
+
+ Como ler: cada célula é acurácia com treino padrão menos acurácia sem treino.. Azul/positivo
+ favorece treino; vermelho/negativo favorece sem treino.. A comparação mantém base, grafo,
+ protocolo e pré-processamento raw..
+
+ Textures recebe um benefício muito maior do treino do que a maioria das outras bases.. Esse
+ ganho compensa várias quedas na média.. Assim, uma média perto de zero não significa que
+ treinar quase não muda cada problema..
+
+ Hipótese: a geometria das features ImageNet já separa bem algumas bases, mas precisa de
+ adaptação em outras.. A cabeça pode aprender uma métrica útil para Textures e, em outras
+ bases, perder propriedades que transferiam para classes novas.. Precisamos de curvas de
+ treino/validação e controles de inicialização para separar essas possibilidades..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                    06
+ 07 / RESULTADOS POR BASE
+
+
+ 5-shot: o baseline sem treino fica
+ difícil de superar
+
+
+
+
+ Como ler: o mesmo contraste da página anterior, agora com cinco suportes por classe.. Observe
+ a coluna sem grafo antes de comparar métodos diferentes..
+
+ Há quedas fortes no no-graph padrão em várias bases e ganho grande em Textures.. Isso torna
+ inadequado defender um único número médio como descrição de todos os domínios.. Nos
+ grafos, o treino frequentemente recupera parte do dano da propagação, sem necessariamente
+ superar o baseline forte sem grafo..
+
+ O que ainda não sabemos: se a queda vem principalmente de compressão para 256 dimensões,
+ de inicialização aleatória, de especialização às classes de treino, de regularização ou de seleção
+ de checkpoint.. O próximo experimento já dá uma pista importante, mas não resolve todos
+ esses fatores..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                      07
+ 08 / CONTROLE DE REPRESENTAÇÃO
+
+
+ A identidade muda a história do
+ treino
+
+
+
+
+ Três condições: identidade 512 sem treino; projeção aleatória 256 com treino padrão;
+ identidade 512 com treino.. No-graph passa de 61,08 para 62,85% no 1-shot e de 76,10 para
+ 76,29% no 5-shot ao treinar a condição iniciada na identidade..
+
+ Isso enfraquece bastante a interpretação de que “aprender é o problema”.. Preservar o ponto
+ de partida parece importante.. A comparação identidade 512 com/sem treino é mais direta; já
+ identidade 512 versus aleatória 256 muda dois fatores simultaneamente.. Separar dimensão de
+ inicialização exige aleatória 512 + treino e um controle adequado de projeção 256..
+
+ Detalhe essencial: “sem treino” ainda aplica LayerNorm inicializada e normalização L2.. O rótulo
+ raw significa ausência de CL2N/PT antes da cabeça, não ausência de qualquer transformação..
+ Aqui o DGCG é 2–4, pois é a variante executada no estudo de identidade..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                    08
+ 09 / IMPLEMENTAÇÃO E PRÉ-PROCESSAMENTO
+
+
+ Há dois cuidados escondidos no
+ pipeline
+
+
+
+
+ CL2N: subtrai o centro calculado nas features de treino e normaliza cada vetor.. PT+CL2N:
+ aplica raiz quadrada aos valores não negativos antes de centralizar/normalizar.. Nos gráficos,
+ zero é o raw do mesmo método e shot.. Melhorias pequenas ou dependentes da condição não
+ justificam dizer que uma transformação vence sempre..
+
+ Checkpoint inicial: o código começa com melhor validação = −∞ e só avalia depois de treinar..
+ Assim, o estado inicial não concorre com os checkpoints treinados.. “Melhor checkpoint”
+ significa melhor entre os checkpoints avaliados, não melhor que o ponto de partida.. Avaliar o
+ episódio zero é um controle prioritário..
+
+ O que o otimizador altera: Θ, escala/deslocamento da LayerNorm e escala dos logits.. A escala
+ positiva dos logits não muda o argmax com distâncias fixas, mas participa dos gradientes..
+ Atribuir toda melhora ou queda apenas a Θ seria incompleto..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                      09
+ 10 / QUANTIDADE DE CONEXÕES
+
+
+ DGCG 2–4 ou 4–6: depende do
+ tamanho do episódio
+
+
+
+
+ Como ler: cada grupo mantém shot e condição de treino; só muda a faixa de grau do DGCG..
+ Aqui os episódios têm 55 ou 75 nós.. Com treino, 4–6 supera 2–4 na média: 64,87 versus
+ 63,61% no 1-shot; 75,14 versus 74,12% no 5-shot..
+
+ Isso não contradiz o histórico em que faixas menores podiam ser melhores em protocolos muito
+ pequenos.. Uma conexão extra em um grafo com poucos nós muda muito sua densidade; em
+ um episódio maior, uma faixa muito baixa pode limitar a informação que circula..
+
+ Limite da conclusão: o resultado apoia dependência do protocolo, não uma lei de que grau ideal
+ cresce sempre com o número de nós.. Shot, número de classes, qualidade das features e
+ construção do grafo também mudam a tarefa.. Densidade escolhida por validação é outra
+ configuração; não deve ser confundida com DGCG fixo 4–6..
+
+ Escolher a melhor faixa por teste seria otimista.. A escolha de
+ hiperparâmetros deve continuar na validação..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                  10
+ 11 / SALTOS E MISTURA COM IDENTIDADE
+
+
+ Mais propagação nem sempre traz
+ mais informação
+
+
+
+
+ K é o número de saltos.. Em K=2, cada nó pode receber informação por caminhos de dois
+ passos.. A mistura usa A efetiva = (1−α)Â + αI antes dos saltos; α=0,5 preserva mais a própria
+ representação.. Não é uma média final entre duas classificações prontas..
+
+ No union 5-shot, aumentar de dois para quatro saltos reduz a média de 73,45 para 71,87%..
+ Usar α=0,5 com dois saltos recupera para 75,24%, ainda abaixo do no-graph 76,10%.. No
+ 1-shot, as mudanças são bem menores na média..
+
+ Hipótese coerente: mistura excessiva pode apagar distinções entre classes ou espalhar ligações
+ erradas.. A queda com mais saltos e a recuperação com identidade são evidências compatíveis
+ com esse mecanismo, mas não o comprovam sozinhas.. Para testar, medir separação
+ intra/interclasse e erros por query antes e depois de cada salto..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                  11
+ 12 / TOPOLOGIAS SEM TREINO
+
+
+ Qualidade da aresta: o que cada
+ intervenção fez
+
+
+
+
+ Como ler: diferenças contra o próprio grafo original, em raw e sem treino.. Azul significa
+ recuperação; não significa superar o no-graph.. DGCG+ é comparado ao DGCG 4–6..
+
+ Pesos: RBO/RBO² usam concordância de rankings; SNN usa vizinhos compartilhados; cosrbf usa
+ similaridade cosseno convertida em peso.. Estrutura: sym une sentidos, mut mantém
+ reciprocidade, prune remove ligações com RBO baixo.. Suportes: sup substitui seu bloco por
+ ligações de mesma classe, supcut apenas remove ligações entre classes distintas nesse bloco..
+ DGCG+ e GRaNDe são variantes adicionais do construtor avaliadas pelo harness..
+
+ O sinal mais consistente é pesar conexões no DGCG 5-shot: cosrbf e RBO² recuperam
+ aproximadamente 1 pp; DGCG+ chega a +1,57 pp, mas sua média 75,42% ainda fica abaixo de
+ 76,10% sem grafo.. A poda melhora cerca de 0,43 pp no 5-shot e piora no 1-shot: dizer que
+ nunca ajuda seria excessivo..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                  12
+ 13 / CONFIRMAÇÃO PARCIAL DAS VARIANTES
+
+
+ Com treino, os pesos cosseno
+ continuam ajudando pouco
+
+
+
+
+ Como ler: compare RBF cosseno treinado ao mesmo grafo treinado sem esse peso.. São 40
+ execuções, não apenas o recorte parcial inicial do README..
+
+ No 1-shot, o ganho médio é +0,09 pp no union e +0,40 pp no DGCG, com melhora em 6/10 e
+ 4/10 bases.. No 5-shot, os ganhos sobem para +0,94 e +0,67 pp, com 7/10 bases melhores em
+ ambos.. A distribuição por base importa: ganho médio positivo não equivale a melhora
+ universal..
+
+ A média final 5-shot é 75,78% no union e 75,81% no DGCG.. Essas condições ainda não
+ superam a média 76,10% do no-graph sem treino.. Isso sugere benefício incremental dos pesos,
+ sem sustentar que resolvem o problema geral..
+
+ RBO² treinado e DGCG+ treinado não foram executados.. Não há conclusão
+ sobre eles nesta bateria..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                13
+ 14 / DIAGNÓSTICO DAS ARESTAS
+
+
+ Homofilia explica parte do padrão,
+ não toda a utilidade
+
+
+
+
+ Homofilia é a fração do peso das arestas que liga imagens da mesma classe, sem autolaços..
+ Aqui usamos as linhas das queries.. Cada ponto combina uma base e um grafo; são 20 pontos
+ por shot.. A correlação com ganho do grafo é 0,65 no 1-shot e 0,86 no 5-shot..
+
+ Bases cujas conexões respeitam melhor as classes tendem a sofrer menos ou ganhar mais com
+ propagação.. Mas os dois métodos na mesma base não são observações independentes, e
+ correlação não demonstra causalidade.. DGCG pode ter homofilia maior e acurácia menor que
+ union: alcance, direção, grau e quais nós são conectados também importam..
+
+ Dois cuidados: homofilia usa rótulos de query apenas para diagnóstico e foi medida em 200
+ episódios separados dos 1.000 de acurácia.. Não é uma correlação por episódio.. Além disso,
+ Cars com cerca de 34–39% está acima do acaso de ligações (~19%); chamar isso simplesmente
+ de “quase aleatório” seria impreciso..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                  14
+ 15 / O PONTO MAIS IMPORTANTE PARA A HIPÓTESE ADAPTATIVA
+
+
+ O proxy é excelente entre bases e
+ fraco por episódio
+
+
+
+
+ À esquerda: uma média por base.. Bases com suportes bem conectados também têm queries
+ bem conectadas: r≈0,998 no union e 0,999 no DGCG.. À direita: a correlação entre os episódios
+ de cada base, já calculada nos arquivos.. Sua média é −0,059 no union e 0,088 no DGCG.. São
+ 150 episódios por base/método neste diagnóstico..
+
+ Analogia: saber que uma cidade é mais quente que outra não garante prever a temperatura de
+ cada hora do dia.. Aqui, o proxy identifica características gerais das bases, mas quase não
+ acompanha a variação de qualidade entre episódios da mesma base..
+
+ Consequência: ainda não temos evidência forte de que a regra identifica precisamente quando
+ cada episódio merece mais propagação.. Ela pode estar funcionando principalmente como uma
+ redução média da intensidade do grafo.. Isso deve ser comparado a um peso fixo calibrado na
+ validação e a pesos embaralhados entre episódios da mesma base..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                 15
+ 16 / RESULTADO FINAL NAS DEZ BASES
+
+
+ O adaptativo recuperou o dano — e
+ chegou ao empate
+
+
+
+
+ A regra calcula a homofilia entre suportes do episódio: h.. Depois usa w = clip((h−lo)/(hi−lo), 0,
+ 1) e mistura wÂ + (1−w)I antes dos saltos.. h baixo reduz propagação; h alto a mantém.. Só usa
+ rótulos dos suportes, disponíveis no problema..
+
+ O union original tinha 73,45%.. Os dois limiares chegam a 75,84 e 76,10%.. O DGCG sai de
+ 73,84% para 75,72 e 76,00%.. O controle sem grafo é 76,0964%; union com 0,45/0,85 dá
+ 76,1018%, diferença de apenas +0,0054 pp.. Arredondar e chamar isso de vitória seria
+ enganoso..
+
+ Os dois pares de limiares foram definidos a priori segundo o registro do experimento, não
+ selecionados pela validação.. Mostramos os dois; escolher agora o melhor pelo teste
+ introduziria viés.. O resultado sustenta recuperação, mas não superioridade..
+
+ 1-shot: não há dois suportes da mesma classe.. Esse proxy não mede conexões positivas; o
+ código volta a w=1.. A regra precisa de outro sinal para atuar nesse regime..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                      16
+ 17 / ADAPTATIVO POR BASE
+
+
+ O empate médio também esconde
+ quem ganha e perde
+
+
+
+
+ Como ler: cada célula compara a regra adaptativa com no-graph sem treino na mesma base..
+ Assim, o gráfico responde à pergunta de pesquisa mais exigente: usar o grafo acrescentou valor
+ ao baseline forte?
+
+ Union 0,45/0,85 ganha em 5/10 bases.. Sports ganha 0,94 pp, Manufacturing perde 1,10 pp;
+ várias outras diferenças ficam perto de zero.. Não há vitória generalizada, e uma seed não
+ permite tratar diferenças pequenas como estáveis..
+
+ Não confundir melhora relativa: ganhar aproximadamente 2,65 pp sobre um grafo prejudicial é
+ útil para controle de dano.. Para defender um método novo, falta mostrar que ele adiciona
+ informação além de preservar a representação original.. Uma regra fixa simples pode conseguir
+ resultado semelhante: esse controle ainda falta..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                  17
+ 18 / LIGAÇÃO COM NOSSOS TESTES NA VM
+
+
+ Micro, Mini e Extended: o grafo
+ continua do mesmo tamanho
+
+
+
+
+ Como ler: cada ponto é média de três seeds; barras mostram desvio entre seeds, não intervalo
+ de confiança da média.. Dentro de cada painel, compare métodos na mesma versão.. Os alvos
+ de densidade do DGCG foram selecionados no Micro e mantidos nas demais versões..
+
+ Aumentar a base amplia as classes/imagens disponíveis para amostrar episódios, mas o grafo
+ continua com 55 ou 75 nós e o orçamento continua com 2.000 episódios de treino.. Portanto,
+ esses testes medem transferência da configuração para outra versão, não escalabilidade para
+ grafos maiores..
+
+ Micro → Mini também muda classes de avaliação; a seed controla split, inicialização e
+ episódios.. Não atribua toda mudança a “mais imagens”.. Esses testes usam a cabeça treinada
+ padrão, enquanto o baseline forte identidade sem treino foi estudado nas bases Micro.. Ainda
+ falta levá-lo às versões maiores..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                    18
+ 19 / POR QUE ESSE CAMINHO PERDEU PRIORIDADE
+
+
+ Extras: muitos testes, pouco sinal
+ estável
+
+
+
+
+ Como ler: cada curva representa método/faixa e modo de extras; o valor é ganho sobre seu
+ controle sem extras, médio nas bases e seis protocolos da bateria de 4.740 execuções.. Este
+ gráfico usa extras presentes em todas as fases e agrupa protocolos; não mostra uma curva
+ individual por base..
+
+ No DGCG, extras podem entrar apenas no contexto dos rankings ou também na propagação..
+ Nos kNN, o uso exibido é na propagação.. São intervenções diferentes: alterar rankings não
+ equivale a colocar todos os extras como nós no grafo de classificação..
+
+ Os ganhos médios das configurações DGCG/union ficam na ordem de décimos de pp ao agregar
+ as quantidades, sem um crescimento monotônico convincente.. Isso combina com sua decisão
+ de não priorizar extras por enquanto.. Não prova que nunca funcionam; mostra que a busca
+ realizada não trouxe um avanço amplo e simples..
+
+ Controles com banco reservado precisam ser comparados dentro da mesma bateria..
+ Experimentos antigos com contexto global no teste mudam a informação disponível e não
+ devem ser tratados como vitória sob o orçamento original.. A análise detalhada das baterias
+ anteriores permanece no relatório principal..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                   19
+ 20 / FATOS, HIPÓTESES E COMO DISTINGUIR
+
+
+ Quais explicações fazem sentido?
+  Hipótese                    Evidência compatível                      Teste que falta
+
+
+  Ponto de partida ruim ou    Identidade 512 + treino supera o treino   Comparar identidade 512, aleatória 512 e
+  compressão prejudicial      padrão e recupera o no-graph..            projeção 256; manter episódios e
+                                                                        orçamento iguais..
+
+
+  Especialização às classes   No-graph perde em várias bases;           Curvas de treino e validação por base;
+  de treino prejudica         Textures tem ganho grande..               distância entre classes antes/depois;
+  transferência                                                         variação de regularização..
+
+
+  Propagação excessiva        Mais saltos pioram 5-shot; identidade     Medir separação intra/interclasse, mudança
+  mistura classes             parcial recupera..                        por query e alcance dos suportes por salto..
+
+
+  Arestas melhor ponderadas   RBO²/cosseno ajudam DGCG 5-shot;          Comparar pesos mantendo estrutura/grau
+  preservam informação        ganhos modestos..                         e orçamento; repetir seeds..
+
+
+  Adaptativo só regula        Empata com no-graph; proxy fraco          Peso fixo validado, peso adaptativo e pesos
+  intensidade média           dentro da base..                          embaralhados dentro da mesma base..
+
+
+  Diferença CPU/GPU causa     DGCG diverge mais que no-graph/union..    Rodar ambos com cache, episódios,
+  divergências pontuais                                                 versões e código idênticos; comparar
+                                                                        adjacências..
+
+
+ Nenhuma dessas hipóteses exige que o trabalho use DGCG.. A questão
+ científica pode ser quando e por que a propagação ajuda no few-shot..
+
+ “Aresta correta” e “aresta útil” não são sinônimos.. Uma aresta entre imagens da mesma classe
+ pode ser redundante; remover uma aresta pode alterar normalização, caminhos e predições de
+ vários nós.. Um diagnóstico de utilidade deve medir mudança no erro ou na margem da query,
+ não apenas igualdade de rótulos..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                                     20
+ 21 / PLANO MÍNIMO COM PRIORIDADE
+
+
+ O próximo teste deve eliminar uma
+ dúvida de cada vez
+  Prioridade        Experimento                                                    Decisão que ele permite
+
+
+  1 • baseline      Mesmas seeds/episódios: sem grafo identidade 512 sem           Distinguir ganho do aprendizado de
+                    treino; identidade 512 com treino; aleatória 512 com treino;   efeito da representação inicial e da
+                    padrão 256.. Incluir estado inicial na validação..             dimensão..
+
+
+  2 • adaptação     Comparar w=0, w=1, grade curta de w fixo validada,             Ver se o proxy traz informação por
+                    adaptativo e w adaptativo embaralhado dentro da base..         episódio ou apenas reduz
+                                                                                   propagação..
+
+
+  3 • repetição     Seeds 7/17/27 nos controles escolhidos; depois                 Ver estabilidade e se o padrão
+                    Flowers/Cars Mini e Extended com baseline forte..              sobrevive além de Micro..
+
+
+  4 • diagnóstico   Salvar predição/margem por query antes/depois do grafo,        Separar aresta semelhante de
+                    erros corrigidos e criados, homofilia e alcance até            conexão que realmente ajuda a
+                    suportes..                                                     decisão..
+
+
+ Regra de avaliação: configurar na validação, congelar a escolha e só então avaliar teste..
+ Registrar seeds, classes, episódios, features e dispositivo.. Para comparar erros, salvar
+ resultados por episódio compartilhado; o resumo agregado atual não permite reconstruir a
+ incerteza de todas as diferenças pareadas..
+
+ Experimento de hipótese, não método final: usar rótulos de query para diagnosticar quais
+ arestas corrigem/criam erros pode revelar mecanismos.. Esses rótulos não podem entrar na
+ regra usada em teste.. Um “oráculo” serve de teto diagnóstico, não de resultado competitivo
+ válido..
+
+ Não executei novos treinos para produzir este relatório.. A prioridade é
+ tornar a próxima rodada mais informativa, não aumentar a grade sem uma
+ pergunta clara..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                                         21
+ 22 / INTERPRETAÇÃO E LIMITES ESTATÍSTICOS
+
+
+ Isso faz sentido em relação à
+ literatura?
+ Não há uma regra de que treinar uma cabeça sempre melhora classes novas.. O resultado
+ depende da representação inicial, do objetivo, do orçamento e do domínio.. Ao mesmo tempo,
+ estes arquivos não sustentam a conclusão geral de que treino ou meta-aprendizado sejam
+ desnecessários.. Aqui, identidade + treino já melhora o no-graph na média, e os grafos também
+ se beneficiam do treino padrão..
+
+ Referência próxima: Hu et al., CVPR 2022, Pushing the Limits of Simple Pipelines for Few-Shot
+ Learning, estuda pipelines simples e representações pré-treinadas fortes, com ganhos
+ adicionais por adaptação.. Serve para justificar um baseline forte, não para afirmar que
+ fine-tuning costuma piorar.. Artigo no CVF..
+
+ Exemplo de tensão entre adaptação e generalização: Parameter-Efficient Fine-Tuning via
+ Meta-Regularizer, IJCV 2026, discute desempenho de adaptação de prompts e generalização
+ para classes novas.. É outro cenário, com CLIP; ajuda a entender que o fenômeno é possível,
+ mas não demonstra a causa dos nossos resultados com ResNet.. Artigo na Springer..
+
+ O que nossos números ainda não autorizam
+
+ Mil episódios estimam desempenho de uma execução no seu split; não equivalem a mil seeds
+ de treinamento.. Os ICs episódicos não incorporam toda a variação de split, inicialização,
+ escolha de hiperparâmetros ou dispositivo.. Uma diferença de 0,01 pp não vira evidência de
+ superioridade só porque há muitos episódios..
+
+ As dez bases também não tornam todos os resultados independentes: os mesmos dados
+ reaparecem em métodos e variantes.. Os gráficos deste guia mostram padrões descritivos, sem
+ testes de significância ou barras inventadas para diferenças que não têm resultados pareados
+ disponíveis..
+
+ Minha leitura: os resultados são coerentes, mas a contribuição ainda precisa
+ ser isolada.. O achado mais sólido é que o baseline e a intensidade da
+ propagação mudam a conclusão..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                     22
+ 23 / APÊNDICE DE REPRODUÇÃO
+
+
+ Fontes, rastreabilidade e o que foi
+ preservado
+ Este PDF usa uma cópia dos resultados existentes, sem editar o código experimental nem
+ substituir o relatório principal.. Os arquivos foram fotografados em 03/11/2026; rodadas
+ posteriores precisam de uma nova consolidação..
+
+  Local no projeto                                     Uso
+
+
+  outputs/testes_claude_20261102/resultados/           Origem dos sete JSONL de resultados e do JSON de proxy..
+
+
+  outputs/explicacao_fewshot_20261103/fontes/          Cópias exatas usadas neste guia; incluem comparação
+                                                       histórica, médias das escalas e médias de extras..
+
+
+  outputs/explicacao_fewshot_20261103/sha256.txt       Hashes para verificar a integridade de cada fonte copiada..
+
+
+  outputs/explicacao_fewshot_20261103/res_*_media      Tabelas de médias por configuração, incluindo validação, teste
+  s.csv                                                e macro-F1..
+
+
+  outputs/explicacao_fewshot_20261103/estatisticas.j   Contagens, correlações, resumo das variantes e médias das
+  son                                                  escalas..
+
+
+  tmp/pdfs/explicacao_20261103/                        Scripts charts.py/build.py, gráficos e arquivos de inspeção
+                                                       visual..
+
+
+  proto_sgc/model.py; proto_sgc/training.py            Arquitetura, parâmetros treináveis e seleção de checkpoint
+                                                       auditados..
+
+
+  outputs/testes_claude_20261102/scripts/              Harness e wrappers de topologia/adaptação auditados..
+
+
+ Convenções: “DGCG” nos novos testes significa 4–6, exceto onde indicado 2–4.. “Sem treino”
+ mantém o backbone pré-treinado e a cabeça identidade com suas normalizações.. Acurácias
+ agregadas são médias aritméticas entre bases; valores em pp são diferenças dessas acurácias..
+
+ O relatório principal anterior, relatorio_fewshot.pdf, permanece disponível com a análise
+ histórica extensa.. Este guia é complementar e prioriza a interpretação dos testes recentes,
+ incluindo correções de leitura em relação aos comentários preliminares do README..
+
+
+
+
+FEW-SHOT / GUIA DOS RESULTADOS / 03 NOV 2026                                                                         23
+

@@ -1,0 +1,184 @@
+{
+  "status": "OK",
+  "generated_at": "2026-11-03",
+  "canonical_rows": 155,
+  "extras_rows": 474,
+  "checks": [
+    {
+      "checagem": "Contagem esperada: historico_metricas",
+      "status": "OK",
+      "detalhe": "2430 / 2430"
+    },
+    {
+      "checagem": "Chaves únicas: historico_metricas",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: historico_densidades",
+      "status": "OK",
+      "detalhe": "4050 / 4050"
+    },
+    {
+      "checagem": "Chaves únicas: historico_densidades",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: grau_selecionado",
+      "status": "OK",
+      "detalhe": "270 / 270"
+    },
+    {
+      "checagem": "Chaves únicas: grau_selecionado",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: densidade_selecionada",
+      "status": "OK",
+      "detalhe": "270 / 270"
+    },
+    {
+      "checagem": "Chaves únicas: densidade_selecionada",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_e1",
+      "status": "OK",
+      "detalhe": "360 / 360"
+    },
+    {
+      "checagem": "Chaves únicas: claude_e1",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_dgcg24",
+      "status": "OK",
+      "detalhe": "80 / 80"
+    },
+    {
+      "checagem": "Chaves únicas: claude_dgcg24",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_idinit",
+      "status": "OK",
+      "detalhe": "60 / 60"
+    },
+    {
+      "checagem": "Chaves únicas: claude_idinit",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_propagacao",
+      "status": "OK",
+      "detalhe": "200 / 200"
+    },
+    {
+      "checagem": "Chaves únicas: claude_propagacao",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_topologia_sem_treino",
+      "status": "OK",
+      "detalhe": "360 / 360"
+    },
+    {
+      "checagem": "Chaves únicas: claude_topologia_sem_treino",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_topologia_com_treino",
+      "status": "OK",
+      "detalhe": "40 / 40"
+    },
+    {
+      "checagem": "Chaves únicas: claude_topologia_com_treino",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_adaptativo",
+      "status": "OK",
+      "detalhe": "40 / 40"
+    },
+    {
+      "checagem": "Chaves únicas: claude_adaptativo",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: claude_proxy",
+      "status": "OK",
+      "detalhe": "20 / 20"
+    },
+    {
+      "checagem": "Chaves únicas: claude_proxy",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: escalas_resultados",
+      "status": "OK",
+      "detalhe": "108 / 108"
+    },
+    {
+      "checagem": "Chaves únicas: escalas_resultados",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: escalas_medias",
+      "status": "OK",
+      "detalhe": "36 / 36"
+    },
+    {
+      "checagem": "Chaves únicas: escalas_medias",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: extras_resultados",
+      "status": "OK",
+      "detalhe": "4740 / 4740"
+    },
+    {
+      "checagem": "Chaves únicas: extras_resultados",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Contagem esperada: extras_medias",
+      "status": "OK",
+      "detalhe": "474 / 474"
+    },
+    {
+      "checagem": "Chaves únicas: extras_medias",
+      "status": "OK",
+      "detalhe": "duplicadas=0"
+    },
+    {
+      "checagem": "Médias de escalas recalculadas",
+      "status": "OK",
+      "detalhe": "diferença máxima=2.84217094304e-14"
+    },
+    {
+      "checagem": "Pares CPU/GPU do protocolo 5w5s10q",
+      "status": "OK",
+      "detalhe": "pares=30"
+    },
+    {
+      "checagem": "Resultados que causaram confusão estão presentes",
+      "status": "OK",
+      "detalhe": "8/8"
+    }
+  ],
+  "failures": []
+}

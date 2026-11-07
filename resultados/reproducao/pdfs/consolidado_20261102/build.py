@@ -1,0 +1,71 @@
+from pathlib import Path
+import pandas as pd
+from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,Table,TableStyle,PageBreak
+from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
+from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from pypdf import PdfReader,PdfWriter
+import hashlib,json
+ROOT=Path.cwd();W=ROOT/'tmp/pdfs/consolidado_20261102';P=ROOT/'output/pdf'
+for name,file in [('DV','DejaVuSans.ttf'),('DV-B','DejaVuSans-Bold.ttf')]:pdfmetrics.registerFont(TTFont(name,'/usr/share/fonts/truetype/dejavu/'+file))
+pdfmetrics.registerFontFamily('DV',normal='DV',bold='DV-B',italic='DV',boldItalic='DV-B')
+st=getSampleStyleSheet()
+for name,size,leading,color in [('BodyX',10,14,'#28394A'),('SmallX',8,11,'#526273'),('TitleX',23,28,'#17334C'),('HeadingX',13,18,'#087C83'),('CellX',8.5,12,'#28394A')]:
+ st.add(ParagraphStyle(name=name,fontName='DV-B' if name in ['TitleX','HeadingX'] else 'DV',fontSize=size,leading=leading,textColor=colors.HexColor(color),spaceAfter=8))
+def para(t,style='BodyX'):return Paragraph(t,st[style])
+def table(data,widths):
+ t=Table([[para(str(x),'CellX') for x in row] for row in data],colWidths=widths,repeatRows=1)
+ t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#DCECEF')),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,colors.HexColor('#F2F5F7')]),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),7),('RIGHTPADDING',(0,0),(-1,-1),7),('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7)]));return t
+def footer(c,d):
+ c.setFont('DV',8);c.setFillColor(colors.HexColor('#526273'));c.drawString(44,23,'IC • Few-shot • Consolidação de 02/11/2026');c.drawRightString(551,23,str(d.page))
+def build(path,flow):SimpleDocTemplate(str(path),pagesize=(595.28,841.89),leftMargin=44,rightMargin=44,topMargin=40,bottomMargin=45,title='Few-shot - Relatório consolidado',author='Gabriel • ELO').build(flow,onFirstPage=footer,onLaterPages=footer)
+def n(x):return f'{x:.2f}'.replace('.',',')
+r=pd.read_csv('/home/bagiel/Downloads/resultados_comparacao.csv');m=pd.read_csv('/home/bagiel/Downloads/medias_comparacao.csv');s=pd.read_csv('/home/bagiel/Downloads/status_comparacao.csv')
+k=['dataset','n_way','n_shot','n_query','metodo','target_kind','alvo'];fk=k+['seed']
+assert len(r)==108 and not r.duplicated(fk).any() and not s.duplicated(fk).any()
+assert s.status.eq('complete').all() and set(map(tuple,r[fk].values))==set(map(tuple,s[fk].values))
+assert r.groupby(k).seed.apply(lambda v:set(v)=={7,17,27}).all()
+for col in ['val_accuracy','test_accuracy','test_macro_f1','test_balanced_accuracy']:
+ a=r.groupby(k)[col].agg(['mean','std']).reset_index().merge(m,on=k,validate='one_to_one')
+ assert len(a)==36 and (a['mean']-a[col+'_mean']).abs().max()<1e-8 and (a['std']-a[col+'_std_seed']).abs().max()<1e-8
+old=[P/'relatorio_fewshot_2026-10-26.pdf',P/'resumo_experimento_extras.pdf',P/'analise_extras_protocolos_2026-10-30.pdf']
+assert [len(PdfReader(f).pages) for f in old]==[59,3,2]
+flow=[para('Few-shot learning','TitleX'),para('Relatório principal consolidado','HeadingX'),para('Experimentos e análises disponíveis até 02/11/2026','SmallX'),Spacer(1,8),para('Objetivo: investigar few-shot e identificar uma contribuição, sem obrigação de usar DGCG.. Os métodos com grafo e o modelo sem grafo são referências para entender quando a interação entre imagens ajuda a classificação..'),para('Guia de leitura','HeadingX'),table([['Seção','Páginas do PDF'],['Relatório principal anterior: protocolos, métodos, graus, densidades, referências globais e histórico','2-60'],['Extras por fase: 470 execuções','61-63'],['Extras por quantidade e protocolo: 4.740 execuções','64-65'],['Micro/Mini/Extended: protocolo e acurácia nas três seeds','66'],['Micro/Mini/Extended: F1 macro e variação entre seeds','67'],['Interpretação conjunta e direção de pesquisa','68'],['Fontes e escopo da consolidação','69']],[415,92]),Spacer(1,12),para('Como interpretar as comparações','HeadingX'),para('Os capítulos anteriores foram preservados integralmente e mantêm suas datas e numeração local.. O índice acima usa a posição no PDF consolidado; os marcadores laterais levam a cada seção.. Expressões como “resultados atuais” nos capítulos antigos referem-se à data daquele capítulo..'),para('As baterias de 2.430 métodos/graus, 4.050 densidades, 470 extras, 4.740 extras/protocolos e 108 escalas contêm 11.798 registros de execução, somados apenas como inventário.. Há condições repetidas entre rodadas; esse total não representa amostras estatisticamente independentes.. Os experimentos exploratórios anteriores permanecem no histórico..'),para('Os 108 resultados de escalas já estão concluídos.. Seus episódios mantêm 55 ou 75 nós: bases maiores ampliam a diversidade disponível, mas não aumentam automaticamente o grafo.. As ideias sobre qualidade de arestas aparecem como propostas, não como experimentos executados..')]
+build(W/'abertura.pdf',flow)
+flow=[para('Micro, Mini e Extended','TitleX'),para('108 execuções completas • Flowers e Cars • Seeds 7, 17 e 27','SmallX'),para('Comparação sem extras e sem banco reservado: DGCG ajustado pela validação do Micro, kNN-union (k=5) e ProtoNet sem grafo.. Protocolos 5-way/1-shot e 5-way/5-shot, sempre com 10 queries por classe; 200 episódios de validação e 1.000 de teste registrados nos CSVs..'),para('As densidades DGCG foram fixadas antes da nova bateria: Flowers 0,125/0,05 e Cars 0,075/0,025, para 1/5-shot.. Os pesos são treinados em cada versão e o checkpoint é escolhido pela validação.. Micro usa split 10/5/5; Flowers Mini/Extended 51/25/26; Cars Mini/Extended 98/49/49..'),para('Acurácia de teste: média ± desvio entre seeds (%)','HeadingX')]
+order=[(f,v,shot) for f in ['flowers','cars'] for shot in [1,5] for v in ['micro','mini','extended']]
+rows=[['Base / versão','Shot','DGCG','kNN-union','Sem grafo']]
+for f,v,shot in order:
+ g=m[(m.dataset==f+'_'+v)&(m.n_shot==shot)].set_index('metodo');best=g.test_accuracy_mean.max();vals=[]
+ for method in ['dgcg','knn-union','no-graph']:
+  a=g.loc[method];t=n(a.test_accuracy_mean)+' ± '+n(a.test_accuracy_std_seed);vals.append('<b>'+t+'</b>' if a.test_accuracy_mean==best else t)
+ rows.append([f.title()+' '+v.title(),shot,*vals])
+flow+=[table(rows,[137,38,111,111,110]),Spacer(1,10),para('Negrito: maior média numérica da linha, sem inferência de significância.. O desvio é amostral entre três seeds e não é IC95.. A seed modifica split de classes, inicialização e episódios; as fontes de variação não foram isoladas..','SmallX'),para('Flowers favorece os grafos; Cars favorece o sem grafo nas seis médias.. A melhora do DGCG sobre outro grafo não implica melhora sobre a classificação sem propagação..'),PageBreak(),para('Métricas e estabilidade','TitleX'),para('F1 macro de teste: média nas três seeds (%)','HeadingX')]
+rows=[['Base / versão','Shot','DGCG','kNN-union','Sem grafo']]
+for f,v,shot in order:
+ g=m[(m.dataset==f+'_'+v)&(m.n_shot==shot)].set_index('metodo');best=g.test_macro_f1_mean.max()
+ vals=[('<b>'+n(g.loc[x].test_macro_f1_mean)+'</b>') if g.loc[x].test_macro_f1_mean==best else n(g.loc[x].test_macro_f1_mean) for x in ['dgcg','knn-union','no-graph']]
+ rows.append([f.title()+' '+v.title(),shot,*vals])
+flow+=[table(rows,[137,38,111,111,110]),Spacer(1,12),para('O que se repete entre seeds','HeadingX'),para('Em Flowers, DGCG supera o sem grafo nas três seeds de cada versão/protocolo.. Em 1-shot Mini e Extended, o union supera DGCG nas três seeds.. Em 5-shot Mini, as médias de acurácia quase empatam (92,05% e 92,04%), e o F1 médio favorece ligeiramente o union..'),para('Em Cars Mini e Extended com 5 shots, DGCG supera union nas três seeds: ganhos médios de 3,13 e 3,73 pp.. Contudo, perde para sem grafo em 6,91 e 8,24 pp.. Em Cars 1-shot, a pequena vantagem média de acurácia do DGCG sobre union não se repete no F1 macro..'),para('Cars Micro apresenta grande dispersão: desvio do DGCG de 7,63 pp em 1-shot e 10,23 pp em 5-shot.. No Mini, são 0,98 e 1,73 pp; no Extended, 1,37 e 1,32 pp.. Isso não prova que mais imagens, isoladamente, estabilizam o método: as classes e partições também diferem..'),PageBreak(),para('Leitura conjunta dos experimentos','TitleX'),para('Resultados que orientam a investigação','HeadingX'),para('<b>Conectividade:</b> as buscas anteriores mostraram sensibilidade ao grau, à densidade e ao tamanho do episódio.. Parte importante do ganho agregado de ajuste veio de episódios pequenos; nos kNN com k=5 e até seis nós, grafos completos podem eliminar a distinção dos embeddings..'),para('<b>Imagens auxiliares:</b> as baterias de 470 e 4.740 execuções mostraram ganhos dependentes de método, fase e quantidade.. Mais extras não produzem melhoria monotônica.. As condições comuns entre rodadas não têm resultados idênticos; os ganhos devem usar controles da mesma rodada..'),para('<b>Base e supervisão:</b> os resultados de escalas reforçam que a propagação pode ajudar Flowers e prejudicar Cars.. Em Flowers, a vantagem sobre sem grafo é mais expressiva em 1-shot; em Cars, o sem grafo permanece uma referência indispensável..'),para('O que esta comparação não demonstra','HeadingX'),para('Micro, Mini e Extended não equivalem ao mesmo teste com quantidades diferentes de treino: Micro também altera o universo de classes.. Não inferir efeito causal puro do volume de imagens.. A comparação manteve o tamanho dos grafos em 55/75 nós e o orçamento de episódios fixo..'),para('A seleção DGCG usa validação Micro seed7; sua repetição nessa seed não é uma confirmação independente da seleção.. Três seeds ampliam a evidência descritiva, mas não sustentam um vencedor universal.. Os CSVs agregados não contêm predições individuais para diagnosticar erros ou qualidade das arestas..'),para('Direção em discussão: qualidade das arestas','HeadingX'),para('Gabriel definiu o foco como investigar few-shot e encontrar uma contribuição, sem obrigação de usar DGCG.. A proposta em discussão é avaliar quando conexões e propagação ajudam ou atrapalham.. Rótulos das queries podem ser usados em diagnóstico posterior, nunca para construir o grafo ou produzir previsões avaliadas..'),para('Diagnósticos possíveis: proporção de arestas entre classes iguais/diferentes e efeito de remover ou reduzir pesos, mantendo modelo e episódios fixos.. Sinais utilizáveis sem rótulos das queries incluem distância, reciprocidade e concordância com o suporte.. Aresta entre imagens da mesma classe não garante utilidade..'),para('Esses diagnósticos e mecanismos adaptativos são propostas ainda não executadas nesta consolidação; sua novidade na literatura não foi verificada.. Ampliar a frente de extras deixou de ser prioridade expressa por Gabriel..'),PageBreak(),para('Fontes e rastreabilidade','TitleX'),para('Documentos incorporados integralmente','HeadingX'),para('1.. relatorio_fewshot_2026-10-26.pdf: 59 páginas com métodos/graus, densidades, gráficos, referências e histórico inicial..\n2.. resumo_experimento_extras.pdf: 3 páginas sobre as 470 execuções..\n3.. analise_extras_protocolos_2026-10-30.pdf: 2 páginas sobre as 4.740 execuções..'),para('O resumo de resultados novos de 26/10 e o relatório de 13/10 não foram acrescentados novamente: o principal de 26/10 já incorpora esses resultados e preserva seu histórico.. Não são novas baterias independentes..'),para('Fontes das 108 execuções de escalas','HeadingX'),para('resultados_comparacao.csv: 108 linhas individuais.. medias_comparacao.csv: 36 grupos, cada um com três seeds.. status_comparacao.csv: 108 estados completos.. Arquivos recebidos na pasta Downloads; cópias e hashes preservados com os materiais desta consolidação no projeto..'),para('Verificação realizada: unicidade das combinações, igualdade das chaves entre resultados/status, seeds 7/17/27 em cada grupo, reconciliação das médias e desvios de acurácia de validação, acurácia de teste, F1 macro e acurácia balanceada.. Valores conferem até precisão numérica..'),para('Contexto e limites das fontes','HeadingX'),para('O protocolo e o estado da pesquisa foram cruzados com as notas ELO: IC - Few-shot; Implementação e protocolo; Resultados; Hipóteses e próximos passos.. Resultados históricos informados por Gabriel continuam identificados como relatos, sem inventar métricas ausentes..'),para('Dados antigos de 12/10 e atuais de 26/10 são apresentados separadamente no principal.. As execuções de diagnóstico reduzido em CPU verificam funcionamento e retomada, mas não contam como resultados científicos adicionais.. Nenhum treinamento novo foi realizado para produzir este documento..'),para('A numeração impressa dos capítulos incorporados é local e preservada.. Para citar a posição no arquivo completo, usar o índice da abertura ou os marcadores do leitor PDF..')]
+build(W/'escalas.pdf',flow)
+assert len(PdfReader(W/'abertura.pdf').pages)==1
+assert len(PdfReader(W/'escalas.pdf').pages)==4
+parts=[(W/'abertura.pdf','Visão geral e índice'),(old[0],'Métodos, graus, densidades e histórico'),(old[1],'Extras por fase - 470 execuções'),(old[2],'Extras e protocolos - 4.740 execuções'),(W/'escalas.pdf','Escalas - 108 execuções e interpretação')]
+writer=PdfWriter()
+for path,title in parts:writer.append(str(path),outline_item=title)
+writer.add_outline_item('F1 macro e estabilidade entre seeds',66)
+writer.add_outline_item('Interpretação e direção atual',67)
+writer.add_outline_item('Fontes',68)
+writer.add_metadata({'/Title':'Few-shot learning - Relatório principal consolidado','/Author':'Gabriel • ELO','/Subject':'Histórico experimental, extras e comparação de escalas; atualizado em 02/11/2026'})
+out=ROOT/'resultados/relatorios/relatorio_fewshot.pdf'
+with out.open('wb') as f:writer.write(f)
+assert len(PdfReader(out).pages)==69
+# Preserve source snapshots used by the new analysis.
+import shutil
+source_dir=ROOT/'outputs/consolidado_fewshot_20261102/fontes';source_dir.mkdir(parents=True,exist_ok=True)
+manifest={}
+for name in ['resultados_comparacao.csv','medias_comparacao.csv','status_comparacao.csv']:
+ src=Path('/home/bagiel/Downloads')/name;dst=source_dir/name;shutil.copy2(src,dst);manifest[name]=hashlib.sha256(dst.read_bytes()).hexdigest()
+(source_dir/'sha256.json').write_text(json.dumps(manifest,indent=2)+'\n')
+print(out,len(PdfReader(out).pages))

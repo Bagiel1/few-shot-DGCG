@@ -1,0 +1,36 @@
+checagem,status,detalhe
+Contagem esperada: historico_metricas,OK,2430 / 2430
+Chaves únicas: historico_metricas,OK,duplicadas=0
+Contagem esperada: historico_densidades,OK,4050 / 4050
+Chaves únicas: historico_densidades,OK,duplicadas=0
+Contagem esperada: grau_selecionado,OK,270 / 270
+Chaves únicas: grau_selecionado,OK,duplicadas=0
+Contagem esperada: densidade_selecionada,OK,270 / 270
+Chaves únicas: densidade_selecionada,OK,duplicadas=0
+Contagem esperada: claude_e1,OK,360 / 360
+Chaves únicas: claude_e1,OK,duplicadas=0
+Contagem esperada: claude_dgcg24,OK,80 / 80
+Chaves únicas: claude_dgcg24,OK,duplicadas=0
+Contagem esperada: claude_idinit,OK,60 / 60
+Chaves únicas: claude_idinit,OK,duplicadas=0
+Contagem esperada: claude_propagacao,OK,200 / 200
+Chaves únicas: claude_propagacao,OK,duplicadas=0
+Contagem esperada: claude_topologia_sem_treino,OK,360 / 360
+Chaves únicas: claude_topologia_sem_treino,OK,duplicadas=0
+Contagem esperada: claude_topologia_com_treino,OK,40 / 40
+Chaves únicas: claude_topologia_com_treino,OK,duplicadas=0
+Contagem esperada: claude_adaptativo,OK,40 / 40
+Chaves únicas: claude_adaptativo,OK,duplicadas=0
+Contagem esperada: claude_proxy,OK,20 / 20
+Chaves únicas: claude_proxy,OK,duplicadas=0
+Contagem esperada: escalas_resultados,OK,108 / 108
+Chaves únicas: escalas_resultados,OK,duplicadas=0
+Contagem esperada: escalas_medias,OK,36 / 36
+Chaves únicas: escalas_medias,OK,duplicadas=0
+Contagem esperada: extras_resultados,OK,4740 / 4740
+Chaves únicas: extras_resultados,OK,duplicadas=0
+Contagem esperada: extras_medias,OK,474 / 474
+Chaves únicas: extras_medias,OK,duplicadas=0
+Médias de escalas recalculadas,OK,diferença máxima=2.84217094304e-14
+Pares CPU/GPU do protocolo 5w5s10q,OK,pares=30
+Resultados que causaram confusão estão presentes,OK,8/8

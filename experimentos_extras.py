@@ -37,6 +37,7 @@ def parser():
     p.add_argument('--n-query', type=int, default=10)
     p.add_argument('--extras-per-class', nargs='+', type=int, default=[10])
     p.add_argument('--bank-per-class', type=int, default=20)
+    p.add_argument('--extra-source', choices=['reserved', 'queries'], default='reserved')
     p.add_argument('--phases', nargs='+', choices=PHASES, default=list(PHASES))
     p.add_argument('--modes', nargs='+', choices=['rankings', 'propagation'], default=['rankings', 'propagation'])
     p.add_argument('--seeds', nargs='+', type=int, default=[7])
@@ -71,6 +72,7 @@ def jobs(args):
                            n_way=args.n_way, n_shot=args.n_shot, n_query=args.n_query,
                            extra_mode=mode, extra_phase=phase, extras_per_class=count,
                            extras_total=count*args.n_way, bank_per_class=args.bank_per_class,
+                           extra_source=args.extra_source,
                            directory=str(folder))
 
 
@@ -78,6 +80,7 @@ def command(job, args):
     cmd = base_command(job, args)
     cmd[cmd.index('--work-dir') + 1] = str(args.work_root / job['dataset'])
     cmd += ['--extra-images', str(job['extras_total']), '--extra-bank-per-class', str(args.bank_per_class),
+            '--extra-source', args.extra_source,
             '--extra-mode', 'propagation' if job['extra_mode'] == 'none' else job['extra_mode'],
             '--extra-phases', *PHASES.get(job['extra_phase'], PHASES['all'])]
     return cmd
@@ -104,6 +107,7 @@ def matches(job, result):
     checks = {'n_way': job['n_way'], 'n_shot': job['n_shot'], 'n_query': job['n_query'],
               'seed': job['seed'], 'extra_images': job['extras_total'],
               'extra_bank_per_class': job['bank_per_class'],
+              'extra_source': job['extra_source'],
               'extra_mode': 'propagation' if job['extra_mode'] == 'none' else job['extra_mode'],
               'extra_phases': PHASES.get(job['extra_phase'], PHASES['all']),
               'model': 'protonet' if job['metodo'] == 'no-graph' else 'proto-sgc'}
@@ -175,13 +179,18 @@ def main(argv=None):
         p.error('Micro: shot + query + banco por classe deve ser <= 40. Nao reutilize imagens.')
     if max(args.extras_per_class) > args.bank_per_class or min(args.seeds) < 0:
         p.error('Extras por classe nao podem exceder o banco; seeds devem ser >= 0.')
+    if args.extra_source == 'queries' and args.modes != ['propagation']:
+        p.error('Extras vindas das queries usam somente --modes propagation.')
     for name in ('datasets', 'methods', 'degrees', 'extras_per_class', 'phases', 'modes', 'seeds'):
         if len(set(getattr(args, name))) != len(getattr(args, name)):
             p.error(f'Valores repetidos em --{name}.')
     plan = list(jobs(args))
     print(f'{len(plan)} execucoes | {len(args.datasets)} bases | '
           f'{args.n_way}way/{args.n_shot}shot/{args.n_query}query | seeds={args.seeds}', flush=True)
-    print('Controle pareado sem extras; bancos fixos por split. Rankings: DGCG. Propagacao: DGCG e kNN.', flush=True)
+    if args.extra_source == 'queries':
+        print('Controle pareado; pool fixo de queries do mesmo episodio. Somente propagacao.', flush=True)
+    else:
+        print('Controle pareado sem extras; bancos fixos por split. Rankings: DGCG. Propagacao: DGCG e kNN.', flush=True)
     if args.dry_run:
         for job in plan:
             print(shlex.join(command(job, args)))
@@ -195,7 +204,15 @@ def main(argv=None):
         if json.loads(manifest_path.read_text())['configuration'] != config:
             p.error('Pasta pertence a outra configuracao/versao de codigo. Escolha outro --output-root.')
     else:
-        atomic_json(manifest_path, dict(configuration=config, runs=plan, protocol_selection=PROTOCOL_SELECTION))
+        selection = (
+            {
+                'protocol': [args.n_way, args.n_shot, args.n_query],
+                'criterion': 'hipotese do professor: efeito de queries nao rotuladas com suporte e query avaliados fixos',
+                'context_source': 'queries do mesmo episodio mestre',
+            }
+            if args.extra_source == 'queries' else PROTOCOL_SELECTION
+        )
+        atomic_json(manifest_path, dict(configuration=config, runs=plan, protocol_selection=selection))
     failures, interrupted = 0, False
     try:
         for index, job in enumerate(plan, 1):

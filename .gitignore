@@ -5,3 +5,10 @@ venv/
 data/
 runs/
 proto_sgc/graphs/__pycache__
+
+# Organização: artefatos de execução locais e caches regeneráveis
+resultados/execucoes/
+**/__pycache__/
+**/_matplotlib_cache/
+**/node_modules
+*.xlsx.inspect.ndjson

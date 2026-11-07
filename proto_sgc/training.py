@@ -22,7 +22,7 @@ from .model import ProtoSGC
 from .graphs.training_rankings import TrainingRankings
 from .graphs.training_rankings import build_reference_ranked_lists
 from .graphs.dgcg import dgcg_correlation_matrix
-from .reference_bank import ExtraReferenceBank
+from .reference_bank import ExtraReferenceBank, QueryContextBank
 from .metrics import classification_scores, record_graphs
 
 
@@ -62,10 +62,23 @@ def extra_graph_options(model, episode, bank, mode="rankings"):
 
 
 def prepare_extra_banks(sampler, splits, args):
-    """Reserva todas as fases para comparacoes pareadas; usa so as habilitadas."""
+    """Prepara o contexto pareado de cada fase; usa somente as fases habilitadas."""
     count = getattr(args, "extra_images", None)
     if count is None:
         return None
+    if getattr(args, "extra_source", "reserved") == "queries":
+        active_per_class = count // sampler.n_way
+        return {
+            phase: QueryContextBank(
+                sampler,
+                splits[phase],
+                pool_per_class=args.extra_bank_per_class,
+                active_per_class=(
+                    active_per_class if phase in args.extra_phases else 0
+                ),
+            )
+            for phase in ("train", "val", "test")
+        }
     all_classes = [label for phase in ("train", "val", "test") for label in splits[phase]]
     if len(set(all_classes)) != len(all_classes):
         raise ValueError("Classes de treino, validacao e teste devem ser disjuntas.")
@@ -95,7 +108,7 @@ def _evaluate(
     seed: int,
     *,
     training_rankings: TrainingRankings | None = None,
-    extra_reference_bank: ExtraReferenceBank | None = None,
+    extra_reference_bank: ExtraReferenceBank | QueryContextBank | None = None,
     extra_mode: str = "rankings",
     graph_statistics=None,
 ) -> Metrics:
@@ -186,16 +199,30 @@ def train_model(
 
     model.to(device)
     extra_count = getattr(args, "dgcg_extra_references", None)
+    query_context = (
+        getattr(args, "extra_images", None) is not None
+        and getattr(args, "extra_source", "reserved") == "queries"
+    )
     train_bank = val_bank = test_bank = None
     context_banks = prepare_extra_banks(sampler, splits, args)
     extra_mode = args.extra_mode if context_banks is not None else "rankings"
     if context_banks is not None:
         train_bank, val_bank, test_bank = (context_banks[p] for p in ("train", "val", "test"))
-        print(f"Extras: modo={extra_mode}; fases={','.join(args.extra_phases)}; "
-              f"totais efetivos por episodio="
-              f"{ {p: b.count for p, b in context_banks.items()} }; "
-              f"reserva={args.extra_bank_per_class}/classe em cada split. "
-              "Sem rotulos extras, sem pseudorrotulos, loss/metricas somente nas queries.")
+        if query_context:
+            print(
+                "Contexto de queries: "
+                f"pool={args.extra_bank_per_class}/classe; "
+                f"ativas={args.extra_images // args.n_way}/classe; "
+                f"fases={','.join(args.extra_phases)}; "
+                f"totais efetivos por episodio={ {p: b.count for p, b in context_banks.items()} }. "
+                "As queries de contexto nao fornecem rotulos; loss/metricas usam somente as queries avaliadas."
+            )
+        else:
+            print(f"Extras: modo={extra_mode}; fases={','.join(args.extra_phases)}; "
+                  f"totais efetivos por episodio="
+                  f"{ {p: b.count for p, b in context_banks.items()} }; "
+                  f"reserva={args.extra_bank_per_class}/classe em cada split. "
+                  "Sem rotulos extras, sem pseudorrotulos, loss/metricas somente nas queries.")
     if extra_count is not None:
         val_bank = ExtraReferenceBank(sampler, splits["val"], count=extra_count,
                                      per_class=args.dgcg_extra_bank_per_class, seed=args.seed + 4202)
@@ -272,7 +299,15 @@ def train_model(
         graph_suffix = f"{graph_suffix}-train-global-rankings"
     if extra_count is not None:
         graph_suffix += f"-extra{extra_count}-bank{args.dgcg_extra_bank_per_class}"
-    if context_banks is not None:
+    if query_context:
+        phases_tag = '-'.join(
+            p for p in ("train", "val", "test") if p in args.extra_phases
+        )
+        graph_suffix += (
+            f"-query-context-pool{args.extra_bank_per_class}"
+            f"-use{args.extra_images}-{phases_tag}"
+        )
+    elif context_banks is not None:
         phases_tag = '-'.join(p for p in ("train", "val", "test") if p in args.extra_phases)
         graph_suffix += (f"-context{args.extra_images}-{extra_mode}-{phases_tag}"
                          f"-bank{args.extra_bank_per_class}")
@@ -396,7 +431,12 @@ def train_model(
         "graph_definition": "nonzero neighbors per adjacency row before self-loops and normalization",
         "validation": asdict(best_val_metrics), "test": asdict(test_metrics),
         "extra_context": ({
-            "mode": extra_mode, "phases": args.extra_phases,
+            "mode": extra_mode,
+            "source": (
+                "queries_from_same_master_episode"
+                if query_context else "reserved_reference_bank"
+            ),
+            "phases": args.extra_phases,
             "requested_total": args.extra_images,
             "banks": {p: b.metadata() for p, b in context_banks.items()},
             "labels_exposed_to_model": False, "pseudo_labels": False,

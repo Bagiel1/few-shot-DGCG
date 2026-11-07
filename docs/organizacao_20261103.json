@@ -1,0 +1,1422 @@
+{
+  "movidos": [
+    {
+      "de": "outputs",
+      "para": "resultados"
+    },
+    {
+      "de": "runs",
+      "para": "resultados/execucoes"
+    },
+    {
+      "de": "output",
+      "para": "resultados/relatorios/anteriores"
+    },
+    {
+      "de": "tmp",
+      "para": "resultados/reproducao"
+    },
+    {
+      "de": "entendendo_resultados_fewshot.pdf",
+      "para": "resultados/relatorios/entendendo_resultados_fewshot.pdf"
+    },
+    {
+      "de": "relatorio_fewshot.pdf",
+      "para": "resultados/relatorios/relatorio_fewshot.pdf"
+    },
+    {
+      "de": "documentacao.md",
+      "para": "docs/documentacao.md"
+    },
+    {
+      "de": "EXPERIMENTO_ESCALAS.md",
+      "para": "docs/EXPERIMENTO_ESCALAS.md"
+    },
+    {
+      "de": "EXPERIMENTO_EXTRAS_PROTOCOLOS.md",
+      "para": "docs/EXPERIMENTO_EXTRAS_PROTOCOLOS.md"
+    },
+    {
+      "de": "buscar_baselines_knn.sh",
+      "para": "scripts/buscar_baselines_knn.sh"
+    },
+    {
+      "de": "buscar_densidades_protocolos.sh",
+      "para": "scripts/buscar_densidades_protocolos.sh"
+    },
+    {
+      "de": "buscar_dgcg_grau_densidade.sh",
+      "para": "scripts/buscar_dgcg_grau_densidade.sh"
+    },
+    {
+      "de": "buscar_escalas.sh",
+      "para": "scripts/buscar_escalas.sh"
+    },
+    {
+      "de": "buscar_extras.sh",
+      "para": "scripts/buscar_extras.sh"
+    },
+    {
+      "de": "buscar_extras_protocolos.sh",
+      "para": "scripts/buscar_extras_protocolos.sh"
+    },
+    {
+      "de": "buscar_metricas_graus.sh",
+      "para": "scripts/buscar_metricas_graus.sh"
+    },
+    {
+      "de": "buscar_protocolos_default.sh",
+      "para": "scripts/buscar_protocolos_default.sh"
+    },
+    {
+      "de": "rodar_base.sh",
+      "para": "scripts/rodar_base.sh"
+    }
+  ],
+  "apagados": [
+    {
+      "path": "resultados/reproducao/pdfs/resumo_extras-2.png",
+      "bytes": 123179,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_extras-1.png",
+      "bytes": 120550,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_extras-3.png",
+      "bytes": 147145,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-18.png",
+      "bytes": 136806,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-11.png",
+      "bytes": 102615,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-15.png",
+      "bytes": 116167,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-4.jpg",
+      "bytes": 244140,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-16.png",
+      "bytes": 119449,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-02.png",
+      "bytes": 112644,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-22.png",
+      "bytes": 148060,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-14.png",
+      "bytes": 115153,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-09.png",
+      "bytes": 121528,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-2.jpg",
+      "bytes": 228569,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-6.jpg",
+      "bytes": 212891,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-07.png",
+      "bytes": 104240,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-04.png",
+      "bytes": 115588,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-05.png",
+      "bytes": 107257,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-23.png",
+      "bytes": 121656,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-10.png",
+      "bytes": 102784,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-01.png",
+      "bytes": 114323,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-5.jpg",
+      "bytes": 253247,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-21.png",
+      "bytes": 113827,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-17.png",
+      "bytes": 116945,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-19.png",
+      "bytes": 138486,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-12.png",
+      "bytes": 139605,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-1.jpg",
+      "bytes": 242898,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/contato-3.jpg",
+      "bytes": 247186,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-13.png",
+      "bytes": 121535,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-03.png",
+      "bytes": 102878,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-20.png",
+      "bytes": 106040,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-06.png",
+      "bytes": 107659,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/explicacao_20261103/pagina-08.png",
+      "bytes": 101514,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/extras_20261030/pagina-1.png",
+      "bytes": 186975,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/extras_20261030/pagina-2.png",
+      "bytes": 205816,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-37.png",
+      "bytes": 29210,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-18.png",
+      "bytes": 28274,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-27.png",
+      "bytes": 54666,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-53.png",
+      "bytes": 61810,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-32.png",
+      "bytes": 49205,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-11.png",
+      "bytes": 58662,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-29.png",
+      "bytes": 53430,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-15.png",
+      "bytes": 44165,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-30.png",
+      "bytes": 54622,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-45.png",
+      "bytes": 55830,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-39.png",
+      "bytes": 32125,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-16.png",
+      "bytes": 44375,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/contato-2.png",
+      "bytes": 506794,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-33.png",
+      "bytes": 41474,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-02.png",
+      "bytes": 46839,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-40.png",
+      "bytes": 33024,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-22.png",
+      "bytes": 52659,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-58.png",
+      "bytes": 60862,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-14.png",
+      "bytes": 40333,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-09.png",
+      "bytes": 50791,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-43.png",
+      "bytes": 47648,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/final-08.png",
+      "bytes": 131210,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-55.png",
+      "bytes": 61484,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-07.png",
+      "bytes": 44881,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-51.png",
+      "bytes": 60656,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-04.png",
+      "bytes": 35248,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-05.png",
+      "bytes": 45642,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-57.png",
+      "bytes": 60705,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-23.png",
+      "bytes": 54480,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-10.png",
+      "bytes": 41112,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-48.png",
+      "bytes": 43070,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-41.png",
+      "bytes": 43683,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-01.png",
+      "bytes": 60883,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-26.png",
+      "bytes": 53304,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-21.png",
+      "bytes": 53968,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-17.png",
+      "bytes": 58832,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-34.png",
+      "bytes": 47104,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-19.png",
+      "bytes": 33221,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-54.png",
+      "bytes": 60714,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-12.png",
+      "bytes": 56177,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/contato-3.png",
+      "bytes": 450912,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-47.png",
+      "bytes": 49484,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-25.png",
+      "bytes": 54996,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-49.png",
+      "bytes": 61125,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-13.png",
+      "bytes": 55610,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-46.png",
+      "bytes": 33463,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-24.png",
+      "bytes": 53715,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-31.png",
+      "bytes": 36240,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-56.png",
+      "bytes": 61049,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-42.png",
+      "bytes": 65921,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/contato-5.png",
+      "bytes": 539736,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/final-05.png",
+      "bytes": 123849,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-03.png",
+      "bytes": 35923,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-20.png",
+      "bytes": 36257,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-52.png",
+      "bytes": 60540,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-35.png",
+      "bytes": 32355,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-44.png",
+      "bytes": 62732,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-50.png",
+      "bytes": 60571,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/contato-1.png",
+      "bytes": 596335,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-06.png",
+      "bytes": 40241,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-28.png",
+      "bytes": 54209,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/contato-4.png",
+      "bytes": 443498,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/final-59.png",
+      "bytes": 138211,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-08.png",
+      "bytes": 51634,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-59.png",
+      "bytes": 54015,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-36.png",
+      "bytes": 29181,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/pagina-38.png",
+      "bytes": 29150,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/revisado-2.png",
+      "bytes": 87177,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/pagina-3.png",
+      "bytes": 142210,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/pagina-4.png",
+      "bytes": 145974,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/revisado-3.png",
+      "bytes": 99080,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/pagina-1.png",
+      "bytes": 126543,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/revisado-1.png",
+      "bytes": 84199,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/revisado-4.png",
+      "bytes": 73532,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/resumo_novos/pagina-2.png",
+      "bytes": 131122,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-18.png",
+      "bytes": 45633,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-27.png",
+      "bytes": 59488,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-32.png",
+      "bytes": 60921,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-11.png",
+      "bytes": 49837,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-29.png",
+      "bytes": 60034,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-15.png",
+      "bytes": 30380,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-30.png",
+      "bytes": 58992,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/final-02.png",
+      "bytes": 133290,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-16.png",
+      "bytes": 34369,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/contato-2.png",
+      "bytes": 419735,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-33.png",
+      "bytes": 60820,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-02.png",
+      "bytes": 61968,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-22.png",
+      "bytes": 61691,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-14.png",
+      "bytes": 30493,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-09.png",
+      "bytes": 50600,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-07.png",
+      "bytes": 71916,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-04.png",
+      "bytes": 54253,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-05.png",
+      "bytes": 70513,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-23.png",
+      "bytes": 34041,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-10.png",
+      "bytes": 41891,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-01.png",
+      "bytes": 56498,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-26.png",
+      "bytes": 59498,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-21.png",
+      "bytes": 56367,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-17.png",
+      "bytes": 33647,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-34.png",
+      "bytes": 60049,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-19.png",
+      "bytes": 65462,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-12.png",
+      "bytes": 29126,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/contato-3.png",
+      "bytes": 511552,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-25.png",
+      "bytes": 45200,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-13.png",
+      "bytes": 30170,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-24.png",
+      "bytes": 53500,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-31.png",
+      "bytes": 59410,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-03.png",
+      "bytes": 55670,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-20.png",
+      "bytes": 50438,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-35.png",
+      "bytes": 56921,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/contato-1.png",
+      "bytes": 613508,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-06.png",
+      "bytes": 73633,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-28.png",
+      "bytes": 58774,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-08.png",
+      "bytes": 34051,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261013/pagina-36.png",
+      "bytes": 50747,
+      "motivo": "Prévia de página PDF já revisada; regenerável"
+    },
+    {
+      "path": "resultados/relatorios/anteriores/pdf/__pycache__/atualizar_relatorio_fewshot.cpython-312.pyc",
+      "bytes": 65673,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "resultados/analise_experimentos_20261026/_matplotlib_cache/fontlist-v3.11.0.json",
+      "bytes": 1168286,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/episodes.cpython-312.pyc",
+      "bytes": 7789,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/experiment.cpython-312.pyc",
+      "bytes": 12114,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/features.cpython-312.pyc",
+      "bytes": 6846,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/data.cpython-312.pyc",
+      "bytes": 9982,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/metrics.cpython-312.pyc",
+      "bytes": 7580,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/__init__.cpython-312.pyc",
+      "bytes": 252,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/reference_bank.cpython-312.pyc",
+      "bytes": 4535,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/training.cpython-312.pyc",
+      "bytes": 22059,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/model.cpython-312.pyc",
+      "bytes": 20313,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/runtime.cpython-312.pyc",
+      "bytes": 3250,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/__pycache__/config.cpython-312.pyc",
+      "bytes": 16720,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/graphs/__pycache__/grande.cpython-312.pyc",
+      "bytes": 4499,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/graphs/__pycache__/__init__.cpython-312.pyc",
+      "bytes": 260,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/graphs/__pycache__/dgcg.cpython-312.pyc",
+      "bytes": 13650,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/graphs/__pycache__/training_rankings.cpython-312.pyc",
+      "bytes": 8948,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "proto_sgc/graphs/__pycache__/knn.cpython-312.pyc",
+      "bytes": 4510,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "tests/__pycache__/test_extra_references.cpython-312.pyc",
+      "bytes": 13165,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "tests/__pycache__/test_density_protocol_sweep.cpython-312.pyc",
+      "bytes": 20586,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "tests/__pycache__/test_reference_train_rankings.cpython-312.pyc",
+      "bytes": 13588,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "tests/__pycache__/test_metrics_and_sweep.cpython-312.pyc",
+      "bytes": 18000,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "tests/__pycache__/test_escalas.cpython-312.pyc",
+      "bytes": 8686,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "__pycache__/experimentos_extras.cpython-312.pyc",
+      "bytes": 20721,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "__pycache__/experimentos_metricas_graus.cpython-312.pyc",
+      "bytes": 28222,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "__pycache__/experimentos_densidades_protocolos.cpython-312.pyc",
+      "bytes": 27089,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "__pycache__/experimentos_escalas.cpython-312.pyc",
+      "bytes": 21308,
+      "motivo": "Cache regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-25.png",
+      "bytes": 50255,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-52.png",
+      "bytes": 55039,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-30.png",
+      "bytes": 50437,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-47.png",
+      "bytes": 29909,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-39.png",
+      "bytes": 26857,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-38.png",
+      "bytes": 26914,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-06.png",
+      "bytes": 48794,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-0.png",
+      "bytes": 258237,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-08.png",
+      "bytes": 41301,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/new-68.png",
+      "bytes": 212045,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-67.png",
+      "bytes": 56382,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-19.png",
+      "bytes": 25485,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-57.png",
+      "bytes": 55379,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-54.png",
+      "bytes": 54011,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-28.png",
+      "bytes": 51547,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/new-67.png",
+      "bytes": 137371,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-02.png",
+      "bytes": 53647,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-12.png",
+      "bytes": 48057,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-10.png",
+      "bytes": 48084,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-58.png",
+      "bytes": 54810,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-17.png",
+      "bytes": 38048,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-45.png",
+      "bytes": 53708,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-11.png",
+      "bytes": 37209,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-3.png",
+      "bytes": 172650,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-46.png",
+      "bytes": 47610,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-50.png",
+      "bytes": 54837,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-49.png",
+      "bytes": 38558,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-05.png",
+      "bytes": 34824,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-59.png",
+      "bytes": 55304,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-18.png",
+      "bytes": 53900,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-29.png",
+      "bytes": 50512,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-09.png",
+      "bytes": 45984,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-4.png",
+      "bytes": 297215,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-20.png",
+      "bytes": 29835,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-24.png",
+      "bytes": 50371,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-2.png",
+      "bytes": 176556,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-27.png",
+      "bytes": 49889,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-60.png",
+      "bytes": 51206,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-23.png",
+      "bytes": 49623,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-13.png",
+      "bytes": 53174,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-5.png",
+      "bytes": 333581,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-56.png",
+      "bytes": 55210,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-15.png",
+      "bytes": 33157,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-63.png",
+      "bytes": 70975,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-48.png",
+      "bytes": 42107,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-69.png",
+      "bytes": 64608,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-51.png",
+      "bytes": 54524,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-04.png",
+      "bytes": 35156,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-62.png",
+      "bytes": 58194,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-35.png",
+      "bytes": 39544,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-53.png",
+      "bytes": 55105,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-41.png",
+      "bytes": 29498,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-65.png",
+      "bytes": 78513,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/contact-1.png",
+      "bytes": 182843,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-37.png",
+      "bytes": 26931,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-26.png",
+      "bytes": 51237,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-68.png",
+      "bytes": 82961,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-07.png",
+      "bytes": 35225,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-43.png",
+      "bytes": 59690,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-66.png",
+      "bytes": 70097,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-31.png",
+      "bytes": 50108,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-64.png",
+      "bytes": 68901,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-16.png",
+      "bytes": 37983,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-44.png",
+      "bytes": 43475,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-61.png",
+      "bytes": 55865,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-14.png",
+      "bytes": 52159,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-01.png",
+      "bytes": 62923,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-55.png",
+      "bytes": 54692,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-42.png",
+      "bytes": 36231,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/new-66.png",
+      "bytes": 164864,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-34.png",
+      "bytes": 34456,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-03.png",
+      "bytes": 40895,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-22.png",
+      "bytes": 49844,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-33.png",
+      "bytes": 41031,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-32.png",
+      "bytes": 33837,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-36.png",
+      "bytes": 31422,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-21.png",
+      "bytes": 32767,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/new-69.png",
+      "bytes": 172382,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/consolidado_20261102/page-40.png",
+      "bytes": 28850,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-06.png",
+      "bytes": 104418,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-02.png",
+      "bytes": 117295,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-01.png",
+      "bytes": 151438,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-07.png",
+      "bytes": 109666,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-04.png",
+      "bytes": 90494,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-05.png",
+      "bytes": 105775,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-09.png",
+      "bytes": 129212,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-03.png",
+      "bytes": 92167,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-10.png",
+      "bytes": 104103,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    },
+    {
+      "path": "resultados/reproducao/pdfs/fewshot_20261026/detalhe-08.png",
+      "bytes": 131193,
+      "motivo": "Renderização temporária de PDF; regenerável"
+    }
+  ],
+  "ajustes": [
+    "scripts/buscar_baselines_knn.sh",
+    "scripts/buscar_densidades_protocolos.sh",
+    "scripts/buscar_dgcg_grau_densidade.sh",
+    "scripts/buscar_escalas.sh",
+    "scripts/buscar_extras.sh",
+    "scripts/buscar_extras_protocolos.sh",
+    "scripts/buscar_metricas_graus.sh",
+    "scripts/buscar_protocolos_default.sh",
+    "scripts/rodar_base.sh",
+    "resultados/relatorios/anteriores/pdf/gerar_relatorio_fewshot.py",
+    "resultados/relatorios/anteriores/pdf/atualizar_relatorio_fewshot.py",
+    "resultados/reproducao/pdfs/resumo_extras.py",
+    "resultados/reproducao/pdfs/explicacao_20261103/build.py",
+    "resultados/reproducao/pdfs/consolidado_20261102/build.py",
+    "resultados/reproducao/pdfs/fewshot_20261026/qa.py"
+  ],
+  "arquivos_preservados_verificados": 4122,
+  "bytes_liberados": 23200209
+}

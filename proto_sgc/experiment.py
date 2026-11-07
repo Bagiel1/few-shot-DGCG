@@ -85,6 +85,8 @@ def main() -> None:
             run_name += f"+extra{args.dgcg_extra_references}-bank{args.dgcg_extra_bank_per_class}"
         if args.extra_images is not None:
             run_name += f"+context{args.extra_images}-{args.extra_mode}-{'-'.join(args.extra_phases)}"
+            if args.extra_source == "queries":
+                run_name += f"-queries-pool{args.extra_bank_per_class}"
         if args.model == "proto-sgc" and args.cosine_rbf_weight:
             run_name = f"{run_name}+cosine-rbf"
         if args.model == "proto-sgc" and args.grande:
@@ -171,9 +173,18 @@ def main() -> None:
                     "Banco separado de suporte/consultas; sem propagacao nas extras."
                 )
         if args.extra_images is not None:
-            print(f"Protocolo de extras: {args.extra_images} totais, modo={args.extra_mode}, "
-                  f"fases={','.join(args.extra_phases)}; reserva={args.extra_bank_per_class}/classe "
-                  "em TODOS os splits para manter suporte/query pareados.")
+            if args.extra_source == "queries":
+                print(
+                    "Protocolo de contexto de queries: "
+                    f"{args.n_query} avaliada(s) + "
+                    f"{args.extra_images // args.n_way} nao rotulada(s) por classe; "
+                    f"pool mestre={args.n_query + args.extra_bank_per_class}/classe; "
+                    f"fases={','.join(args.extra_phases)}."
+                )
+            else:
+                print(f"Protocolo de extras: {args.extra_images} totais, modo={args.extra_mode}, "
+                      f"fases={','.join(args.extra_phases)}; reserva={args.extra_bank_per_class}/classe "
+                      "em TODOS os splits para manter suporte/query pareados.")
         # Cada variante recebe uma nova instancia com a mesma inicializacao
         # aleatoria, garantida por seed_everything no inicio do laco.
         model = ProtoSGC(

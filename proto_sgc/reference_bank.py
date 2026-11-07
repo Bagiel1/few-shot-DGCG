@@ -52,3 +52,71 @@ class ExtraReferenceBank:
     def metadata(self) -> dict:
         return {"count":self.count, "per_class":self.per_class, "seed":self.seed,
                 "bank_ids":self.bank_ids, "episode_ids":self.episode_ids}
+
+
+class QueryContextBank:
+    """Separa queries avaliadas e contexto nao rotulado de um episodio mestre."""
+
+    def __init__(self, sampler: FeatureEpisodeSampler, classes: Sequence[str], *,
+                 pool_per_class: int, active_per_class: int):
+        if pool_per_class < 0 or not 0 <= active_per_class <= pool_per_class:
+            raise ValueError("O contexto ativo deve estar entre zero e o tamanho do pool.")
+        self.classes = sorted(classes)
+        self.pool_per_class = pool_per_class
+        self.active_per_class = active_per_class
+        self.count = sampler.n_way * active_per_class
+        self.n_way = sampler.n_way
+        self.n_shot = sampler.n_shot
+        self.n_query = sampler.n_query
+        self.master_query_count = sampler.n_query + pool_per_class
+        self.master_sampler = FeatureEpisodeSampler(
+            sampler.features_by_class,
+            n_way=sampler.n_way,
+            n_shot=sampler.n_shot,
+            n_query=self.master_query_count,
+        )
+        self._last_episode_ids: tuple[tuple[str, int], ...] | None = None
+        self._last_extra_x: torch.Tensor | None = None
+
+    def sample(self, rng: np.random.Generator) -> Episode:
+        master = self.master_sampler.sample(self.classes, rng)
+        n_support = self.n_way * self.n_shot
+        master_query_ids = master.sample_ids[n_support:]
+        evaluated_positions: list[int] = []
+        context_positions: list[int] = []
+        for class_index in range(self.n_way):
+            start = class_index * self.master_query_count
+            evaluated_positions.extend(range(start, start + self.n_query))
+            context_start = start + self.n_query
+            context_positions.extend(
+                range(context_start, context_start + self.active_per_class)
+            )
+
+        evaluated_index = torch.tensor(evaluated_positions, dtype=torch.long)
+        context_index = torch.tensor(context_positions, dtype=torch.long)
+        evaluated_ids = tuple(master_query_ids[index] for index in evaluated_positions)
+        episode = Episode(
+            support_x=master.support_x,
+            support_y=master.support_y,
+            query_x=master.query_x[evaluated_index],
+            query_y=master.query_y[evaluated_index],
+            sample_ids=master.sample_ids[:n_support] + evaluated_ids,
+        )
+        self._last_episode_ids = episode.sample_ids
+        self._last_extra_x = master.query_x[context_index]
+        return episode
+
+    def extra_features(self, episode: Episode) -> torch.Tensor:
+        if episode.sample_ids != self._last_episode_ids or self._last_extra_x is None:
+            raise ValueError("O contexto solicitado nao pertence ao ultimo episodio amostrado.")
+        return self._last_extra_x
+
+    def metadata(self) -> dict:
+        return {
+            "kind": "queries_from_same_master_episode",
+            "pool_per_class": self.pool_per_class,
+            "active_per_class": self.active_per_class,
+            "evaluated_queries_per_class": self.n_query,
+            "selection": "first_queries_evaluated; following_queries_are_nested_context",
+            "count": self.count,
+        }

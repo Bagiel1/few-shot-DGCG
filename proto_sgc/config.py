@@ -255,7 +255,17 @@ def parse_args() -> argparse.Namespace:
     )
     graph.add_argument(
         "--extra-bank-per-class", type=int, default=20,
-        help="Reserva fixa por classe nas TRES fases, inclusive controles/fases sem extras (default 20).",
+        help=(
+            "Com --extra-source reserved, reserva fixa por classe. Com queries, "
+            "define o pool fixo de queries de contexto por classe."
+        ),
+    )
+    graph.add_argument(
+        "--extra-source", choices=("reserved", "queries"), default="reserved",
+        help=(
+            "reserved usa o banco separado antigo; queries separa as extras das "
+            "queries sorteadas no mesmo episodio mestre."
+        ),
     )
     graph.add_argument(
         "--dgcg-correlation",
@@ -364,6 +374,13 @@ def validate_hyperparameters(args: argparse.Namespace) -> None:
             raise ValueError("Extras positivas requerem proto-sgc; no-graph aceita apenas --extra-images 0.")
         if context_count and args.extra_mode == "rankings" and args.graph_type not in DGCG_GRAPH_TYPES:
             raise ValueError("Extras somente nos rankings requerem dgcg ou dgcg-plus.")
+        if args.extra_source == "queries":
+            if context_count % args.n_way:
+                raise ValueError("Extras vindas de queries devem ser divisiveis por n-way.")
+            if context_count > args.n_way * args.extra_bank_per_class:
+                raise ValueError("Extras excedem o pool fixo de queries por classe.")
+            if args.extra_mode != "propagation":
+                raise ValueError("Extras vindas de queries usam somente o modo propagation.")
     extra = getattr(args, "dgcg_extra_references", None)
     if extra is not None:
         if args.model != "proto-sgc" or args.graph_type not in DGCG_GRAPH_TYPES:
