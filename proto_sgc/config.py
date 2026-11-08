@@ -38,64 +38,59 @@ KNN_METRICS = ("euclidean", "cosine")
 GRANDE_METRICS = ("euclidean", "cosine", "rbo")
 
 
-def parse_args() -> argparse.Namespace:
-    """Define a interface de linha de comando e devolve seus argumentos.
-
-    As opcoes sao separadas em quatro grupos para que ``--help`` tambem sirva
-    como uma referencia rapida do experimento.
-    """
-
-    parser = argparse.ArgumentParser(
-        description="ProtoNet + SGC transdutivo no Meta-Album Flowers Micro."
-    )
-    # 1) Origem das imagens, cache e extrator visual congelado.
-    data = parser.add_argument_group("dados e backbone")
-    data.add_argument(
+def _add_data_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de dados e backbone."""
+    group = parser.add_argument_group("dados e backbone")
+    group.add_argument(
         "--data-root",
         type=Path,
         default=None,
         help="Pasta Meta-Album ja baixada, contendo labels.csv e images/. "
         "Se omitida, o Flowers Micro sera baixado via OpenML.",
     )
-    data.add_argument(
+    group.add_argument(
         "--openml-id",
         type=int,
         default=FLOWERS_MICRO_OPENML_ID,
         help="ID OpenML; o padrao 44239 corresponde ao Flowers Micro.",
     )
-    data.add_argument(
+    group.add_argument(
         "--cache-dir",
         type=Path,
         default=Path("data/openml"),
         help="Cache do OpenML.",
     )
-    data.add_argument(
+    group.add_argument(
         "--work-dir",
         type=Path,
         default=Path("runs/proto_sgc_meta_album"),
         help="Embeddings, checkpoint e resultados.",
     )
-    data.add_argument("--image-size", type=int, default=128)
-    data.add_argument("--batch-size", type=int, default=64)
-    data.add_argument("--num-workers", type=int, default=0)
-    data.add_argument(
+    group.add_argument("--backbone", choices=("resnet18", "vit-b-16"), default="resnet18")
+    group.add_argument("--image-size", type=int, default=None,
+                      help="ResNet: padrao 128. ViT-B/16: somente 224 (padrao).")
+    group.add_argument("--batch-size", type=int, default=64)
+    group.add_argument("--num-workers", type=int, default=0)
+    group.add_argument(
         "--weights",
         choices=("imagenet", "random"),
         default="imagenet",
-        help="Pesos da ResNet-18. Use random apenas para teste/offline.",
+        help="imagenet usa IMAGENET1K_V1 do backbone escolhido; random somente para teste/offline.",
     )
-    data.add_argument(
+    group.add_argument(
         "--recompute-features",
         action="store_true",
-        help="Ignora o cache local de embeddings da ResNet.",
+        help="Ignora o cache local de embeddings do backbone.",
     )
 
-    # 2) Formato N-way/K-shot dos episodios e divisao das classes.
-    episode = parser.add_argument_group("episodios")
-    episode.add_argument("--n-way", type=int, default=5)
-    episode.add_argument("--n-shot", type=int, default=1)
-    episode.add_argument("--n-query", type=int, default=5)
-    episode.add_argument(
+
+def _add_episode_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de episodios."""
+    group = parser.add_argument_group("episodios")
+    group.add_argument("--n-way", type=int, default=5)
+    group.add_argument("--n-shot", type=int, default=1)
+    group.add_argument("--n-query", type=int, default=5)
+    group.add_argument(
         "--class-split",
         type=int,
         nargs=3,
@@ -104,16 +99,18 @@ def parse_args() -> argparse.Namespace:
         help="Numero de classes por particao. Padrao para 20 classes: 10 5 5.",
     )
 
-    # 3) Modelo, construcao de grafo, DGCG/DGCG+ e GRaNDe.
-    graph = parser.add_argument_group("ProtoNet/SGC")
-    graph.add_argument(
+
+def _add_model_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de ProtoNet/SGC."""
+    group = parser.add_argument_group("ProtoNet/SGC")
+    group.add_argument(
         "--model",
         choices=("proto-sgc", "protonet"),
         default="proto-sgc",
         help="proto-sgc usa A_hat^K X Theta; protonet usa X Theta.",
     )
-    graph.add_argument("--feature-dim", type=int, default=256)
-    graph.add_argument(
+    group.add_argument("--feature-dim", type=int, default=256)
+    group.add_argument(
         "--knn",
         type=int,
         default=5,
@@ -122,13 +119,13 @@ def parse_args() -> argparse.Namespace:
             "nao e usado por DGCG/DGCG+."
         ),
     )
-    graph.add_argument(
+    group.add_argument(
         "--knn-metric",
         choices=KNN_METRICS,
         default="euclidean",
         help="Metrica para selecionar vizinhos kNN; independente de --dgcg-metric. Pesos padrao binarios.",
     )
-    graph.add_argument(
+    group.add_argument(
         "--graph-type",
         choices=(*GRAPH_TYPES, *GRAPH_ALIASES, "all"),
         default="knn-union",
@@ -141,62 +138,13 @@ def parse_args() -> argparse.Namespace:
             "todas."
         ),
     )
-    graph.add_argument("--sgc-hops", type=int, default=2)
-    graph.add_argument(
-        "--grande",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help=(
-            "Ativa GRaNDe na normalizacao de qualquer topologia. A flag "
-            "--no-grande o desativa explicitamente (padrao: desativado)."
-        ),
-    )
-    graph.add_argument(
-        "--grande-sigma",
-        type=float,
-        default=0.2,
-        help="Sigma do kernel gaussiano do GRaNDe (padrao oficial: 0.2).",
-    )
-    graph.add_argument(
-        "--grande-metric",
-        choices=GRANDE_METRICS,
-        default="euclidean",
-        help=(
-            "Distancia das arestas usada pelo GRaNDe. euclidean reproduz o "
-            "codigo oficial; cosine usa 1 - cosseno entre os mesmos vetores; "
-            "rbo usa 1 - RBO entre as listas ranqueadas desses vetores. Em "
-            "todos os casos o min-max global e o kernel gaussiano nao mudam."
-        ),
-    )
-    graph.add_argument(
-        "--grande-rbo-p",
-        type=float,
-        default=0.9,
-        help=(
-            "Persistencia p do RBO do GRaNDe, usada apenas com "
-            "--grande-metric rbo. As listas ranqueadas seguem --dgcg-metric e "
-            "os cortes --dgcg-list-size/--dgcg-top-k, mesmo em topologias kNN."
-        ),
-    )
-    graph.add_argument(
-        "--cosine-rbf-weight",
-        action="store_true",
-        help=(
-            "Ablacao opcional: substitui os valores das arestas existentes por "
-            "exp(-(1-cosseno)^2 / (2*sigma^2)), sem alterar as arestas; "
-            "--graph-temperature define sigma."
-        ),
-    )
-    graph.add_argument(
-        "--graph-temperature",
-        type=float,
-        default=0.2,
-        help=(
-            "Sigma usado somente pela ablacao --cosine-rbf-weight. "
-            "Nao interfere nos grafos padrao."
-        ),
-    )
-    graph.add_argument(
+    group.add_argument("--sgc-hops", type=int, default=2)
+
+
+def _add_dgcg_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de DGCG."""
+    group = parser.add_argument_group("DGCG")
+    group.add_argument(
         "--dgcg-metric",
         choices=DGCG_METRICS,
         default="euclidean",
@@ -205,99 +153,37 @@ def parse_args() -> argparse.Namespace:
             "reproduz as ranked lists geradas pelo BallTree original."
         ),
     )
-    graph.add_argument(
-        "--dgcg-train-global-rankings",
-        action="store_true",
-        help=(
-            "Usa rankings de todas as imagens de treino nas correlacoes do DGCG/DGCG+. "
-            "Candidatos, limiar e pesos DGCG+ continuam episodicos. "
-            "Validacao e teste usam somente rankings do episodio."
-        ),
-    )
-    graph.add_argument(
-        "--dgcg-reference-train-rankings",
-        action="store_true",
-        help=(
-            "Treino: rankings contra todas as imagens de treino. Validacao/teste: "
-            "rankings contra treino + somente o episodio atual. "
-            "Grafo e candidatos continuam episodicos; sem rotulos nas correlacoes."
-        ),
-    )
-    graph.add_argument(
-        "--dgcg-extra-references",
-        type=int,
-        default=None,
-        metavar="N",
-        help=(
-            "Validacao/teste: N referencias nao rotuladas das classes do episodio, "
-            "reservadas fora de suporte/consultas; somente nos rankings. "
-            "Omitir desativa. N=0 e o controle com o mesmo banco reservado."
-        ),
-    )
-    graph.add_argument(
-        "--dgcg-extra-bank-per-class",
-        type=int,
-        default=20,
-        help="Imagens reservadas por classe na avaliacao com referencias extras (default 20).",
-    )
-    graph.add_argument(
-        "--extra-images", type=int, default=None, metavar="N",
-        help="Novo protocolo: N extras totais por episodio. 0 reserva os mesmos bancos sem usar extras.",
-    )
-    graph.add_argument(
-        "--extra-mode", choices=("rankings", "propagation"), default="rankings",
-        help="rankings: somente correlacoes DGCG; propagation: extras tambem sao nos do grafo.",
-    )
-    graph.add_argument(
-        "--extra-phases", nargs="+", choices=("train", "val", "test"),
-        default=["train", "val", "test"],
-        help="Fases que usam extras. Bancos separados por split; nunca mistura classes entre fases.",
-    )
-    graph.add_argument(
-        "--extra-bank-per-class", type=int, default=20,
-        help=(
-            "Com --extra-source reserved, reserva fixa por classe. Com queries, "
-            "define o pool fixo de queries de contexto por classe."
-        ),
-    )
-    graph.add_argument(
-        "--extra-source", choices=("reserved", "queries"), default="reserved",
-        help=(
-            "reserved usa o banco separado antigo; queries separa as extras das "
-            "queries sorteadas no mesmo episodio mestre."
-        ),
-    )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-correlation",
         choices=DGCG_CORRELATIONS,
         default="rbo",
         help="Correlacao entre rankings usada pelo DGCG.",
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-list-size",
         type=int,
         default=200,
         help="Tamanho maximo L; limitado ao universo de imagens usado nos rankings.",
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-candidate-k",
         type=int,
         default=200,
         help="Numero maximo de candidatos; sempre limitado a L-1.",
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-top-k",
         type=int,
         default=40,
         help="Profundidade das listas na correlacao (padrao oficial: 40).",
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-threshold",
         type=float,
         default=None,
         help="Limiar manual do DGCG. Se omitido, usa busca guiada por grau medio.",
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-target-degree",
         type=float,
         nargs=2,
@@ -307,7 +193,7 @@ def parse_args() -> argparse.Namespace:
             "Intervalo-alvo do grau medio no modo automatico (padrao: 4--6)."
         ),
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-target-density",
         type=float,
         nargs=2,
@@ -318,33 +204,181 @@ def parse_args() -> argparse.Namespace:
             "--dgcg-target-degree. Util para reproduzir o protocolo nao episodico."
         ),
     )
-    graph.add_argument(
+    group.add_argument(
         "--dgcg-rbo-p",
         type=float,
         default=0.9,
         help="Persistencia p do RBO (padrao oficial: 0.9).",
     )
-    # 4) Quantidade de episodios, otimizador, semente e dispositivo.
-    train = parser.add_argument_group("otimizacao e avaliacao")
-    train.add_argument("--train-episodes", type=int, default=2000)
-    train.add_argument("--val-episodes", type=int, default=200)
-    train.add_argument("--test-episodes", type=int, default=1000)
-    train.add_argument("--val-every", type=int, default=200)
-    train.add_argument("--learning-rate", type=float, default=1e-3)
-    train.add_argument("--weight-decay", type=float, default=1e-4)
-    train.add_argument("--grad-clip", type=float, default=5.0)
-    train.add_argument("--seed", type=int, default=7)
-    train.add_argument(
+
+
+def _add_context_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de contexto e referencias extras."""
+    group = parser.add_argument_group("contexto e referencias extras")
+    group.add_argument(
+        "--dgcg-train-global-rankings",
+        action="store_true",
+        help=(
+            "Usa rankings de todas as imagens de treino nas correlacoes do DGCG/DGCG+. "
+            "Candidatos, limiar e pesos DGCG+ continuam episodicos. "
+            "Validacao e teste usam somente rankings do episodio."
+        ),
+    )
+    group.add_argument(
+        "--dgcg-reference-train-rankings",
+        action="store_true",
+        help=(
+            "Treino: rankings contra todas as imagens de treino. Validacao/teste: "
+            "rankings contra treino + somente o episodio atual. "
+            "Grafo e candidatos continuam episodicos; sem rotulos nas correlacoes."
+        ),
+    )
+    group.add_argument(
+        "--dgcg-extra-references",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Validacao/teste: N referencias nao rotuladas das classes do episodio, "
+            "reservadas fora de suporte/consultas; somente nos rankings. "
+            "Omitir desativa. N=0 e o controle com o mesmo banco reservado."
+        ),
+    )
+    group.add_argument(
+        "--dgcg-extra-bank-per-class",
+        type=int,
+        default=20,
+        help="Imagens reservadas por classe na avaliacao com referencias extras (default 20).",
+    )
+    group.add_argument(
+        "--extra-images", type=int, default=None, metavar="N",
+        help="Novo protocolo: N extras totais por episodio. 0 reserva os mesmos bancos sem usar extras.",
+    )
+    group.add_argument(
+        "--extra-mode", choices=("rankings", "propagation"), default="rankings",
+        help="rankings: somente correlacoes DGCG; propagation: extras tambem sao nos do grafo.",
+    )
+    group.add_argument(
+        "--extra-phases", nargs="+", choices=("train", "val", "test"),
+        default=["train", "val", "test"],
+        help="Fases que usam extras. Bancos separados por split; nunca mistura classes entre fases.",
+    )
+    group.add_argument(
+        "--extra-bank-per-class", type=int, default=20,
+        help=(
+            "Com --extra-source reserved, reserva fixa por classe. Com queries, "
+            "define o pool fixo de queries de contexto por classe."
+        ),
+    )
+    group.add_argument(
+        "--extra-source", choices=("reserved", "queries"), default="reserved",
+        help=(
+            "reserved usa o banco separado antigo; queries separa as extras das "
+            "queries sorteadas no mesmo episodio mestre."
+        ),
+    )
+
+
+def _add_weighting_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de ponderacao e GRaNDe."""
+    group = parser.add_argument_group("ponderacao e GRaNDe")
+    group.add_argument(
+        "--grande",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Ativa GRaNDe na normalizacao de qualquer topologia. A flag "
+            "--no-grande o desativa explicitamente (padrao: desativado)."
+        ),
+    )
+    group.add_argument(
+        "--grande-sigma",
+        type=float,
+        default=0.2,
+        help="Sigma do kernel gaussiano do GRaNDe (padrao oficial: 0.2).",
+    )
+    group.add_argument(
+        "--grande-metric",
+        choices=GRANDE_METRICS,
+        default="euclidean",
+        help=(
+            "Distancia das arestas usada pelo GRaNDe. euclidean reproduz o "
+            "codigo oficial; cosine usa 1 - cosseno entre os mesmos vetores; "
+            "rbo usa 1 - RBO entre as listas ranqueadas desses vetores. Em "
+            "todos os casos o min-max global e o kernel gaussiano nao mudam."
+        ),
+    )
+    group.add_argument(
+        "--grande-rbo-p",
+        type=float,
+        default=0.9,
+        help=(
+            "Persistencia p do RBO do GRaNDe, usada apenas com "
+            "--grande-metric rbo. As listas ranqueadas seguem --dgcg-metric e "
+            "os cortes --dgcg-list-size/--dgcg-top-k, mesmo em topologias kNN."
+        ),
+    )
+    group.add_argument(
+        "--cosine-rbf-weight",
+        action="store_true",
+        help=(
+            "Ablacao opcional: substitui os valores das arestas existentes por "
+            "exp(-(1-cosseno)^2 / (2*sigma^2)), sem alterar as arestas; "
+            "--graph-temperature define sigma."
+        ),
+    )
+    group.add_argument(
+        "--graph-temperature",
+        type=float,
+        default=0.2,
+        help=(
+            "Sigma usado somente pela ablacao --cosine-rbf-weight. "
+            "Nao interfere nos grafos padrao."
+        ),
+    )
+
+
+def _add_training_arguments(parser: argparse.ArgumentParser) -> None:
+    """Registra as opcoes de otimizacao e avaliacao."""
+    group = parser.add_argument_group("otimizacao e avaliacao")
+    group.add_argument("--train-free", action="store_true",
+                       help="Sem otimizacao: Theta identidade na dimensao do backbone; LayerNorm e escala fixas.")
+    group.add_argument("--train-episodes", type=int, default=2000)
+    group.add_argument("--val-episodes", type=int, default=200)
+    group.add_argument("--test-episodes", type=int, default=1000)
+    group.add_argument("--val-every", type=int, default=200)
+    group.add_argument("--learning-rate", type=float, default=1e-3)
+    group.add_argument("--weight-decay", type=float, default=1e-4)
+    group.add_argument("--grad-clip", type=float, default=5.0)
+    group.add_argument("--seed", type=int, default=7)
+    group.add_argument(
         "--device",
         choices=("auto", "cpu", "cuda", "mps"),
         default="auto",
     )
-    train.add_argument(
+    group.add_argument(
         "--quick",
         action="store_true",
         help="Executa 200/50/200 episodios para um teste rapido.",
     )
+
+
+def parse_args() -> argparse.Namespace:
+    """Le os argumentos; cada familia de opcoes e definida separadamente."""
+    parser = argparse.ArgumentParser(
+        description="ProtoNet + SGC transdutivo no Meta-Album Flowers Micro."
+    )
+    _add_data_arguments(parser)
+    _add_episode_arguments(parser)
+    _add_model_arguments(parser)
+    _add_dgcg_arguments(parser)
+    _add_context_arguments(parser)
+    _add_weighting_arguments(parser)
+    _add_training_arguments(parser)
+
     args = parser.parse_args()
+    if args.image_size is None:
+        args.image_size = 224 if args.backbone == "vit-b-16" else 128
 
     # ``--quick`` altera apenas o custo do experimento; todo o pipeline e
     # mantido, o que o torna util como teste de funcionamento ponta a ponta.
@@ -359,6 +393,14 @@ def parse_args() -> argparse.Namespace:
 def validate_hyperparameters(args: argparse.Namespace) -> None:
     """Valida relacoes numericas que o argparse nao expressa sozinho."""
 
+    if getattr(args, "backbone", "resnet18") == "vit-b-16" and args.image_size != 224:
+        raise ValueError("ViT-B/16 usa entrada 224x224; remova --image-size ou informe 224.")
+    if getattr(args, "train_free", False) and (
+        getattr(args, "extra_images", None) is not None
+        or getattr(args, "dgcg_extra_references", None) is not None
+        or args.dgcg_train_global_rankings or args.dgcg_reference_train_rankings
+    ):
+        raise ValueError("--train-free nesta comparacao usa episodios padrao, sem extras/rankings globais.")
     context_count = getattr(args, "extra_images", None)
     if context_count is not None:
         if context_count < 0 or args.extra_bank_per_class < 1:
@@ -377,8 +419,6 @@ def validate_hyperparameters(args: argparse.Namespace) -> None:
         if args.extra_source == "queries":
             if context_count % args.n_way:
                 raise ValueError("Extras vindas de queries devem ser divisiveis por n-way.")
-            if context_count > args.n_way * args.extra_bank_per_class:
-                raise ValueError("Extras excedem o pool fixo de queries por classe.")
             if args.extra_mode != "propagation":
                 raise ValueError("Extras vindas de queries usam somente o modo propagation.")
     extra = getattr(args, "dgcg_extra_references", None)

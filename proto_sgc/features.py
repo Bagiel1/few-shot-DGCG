@@ -1,4 +1,4 @@
-"""ResNet-18 congelada: pré-processamento, extração dos embeddings e cache em disco."""
+"""Backbones congelados: pré-processamento, extração dos embeddings e cache."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import models, transforms
-from torchvision.models import ResNet18_Weights
+from torchvision.models import ResNet18_Weights, ViT_B_16_Weights
 
 from .data import ImageRecord, ImageRecordDataset
 from .runtime import _safe_torch_load
@@ -37,7 +37,7 @@ def records_fingerprint(records: Sequence[ImageRecord]) -> str:
 def build_resnet18(weights_name: str) -> tuple[nn.Module, int]:
     """Cria uma ResNet-18 congelada e remove sua camada classificadora."""
 
-    weights = ResNet18_Weights.DEFAULT if weights_name == "imagenet" else None
+    weights = ResNet18_Weights.IMAGENET1K_V1 if weights_name == "imagenet" else None
     backbone = models.resnet18(weights=weights)
 
     # ``in_features`` e a dimensao do vetor entregue à FC original. Trocando a
@@ -47,6 +47,39 @@ def build_resnet18(weights_name: str) -> tuple[nn.Module, int]:
     backbone.requires_grad_(False)
     backbone.eval()
     return backbone, output_dim
+
+
+def build_vit_b_16(weights_name: str) -> tuple[nn.Module, int]:
+    """Devolve o token de classificacao de 768 valores, sem a classificadora."""
+    weights = ViT_B_16_Weights.IMAGENET1K_V1 if weights_name == "imagenet" else None
+    backbone = models.vit_b_16(weights=weights)
+    output_dim = backbone.heads.head.in_features
+    backbone.heads = nn.Identity()
+    backbone.requires_grad_(False)
+    backbone.eval()
+    return backbone, output_dim
+
+
+def feature_spec(args: argparse.Namespace) -> dict:
+    """Identidade do extrator e da transformacao; nao depende do treino posterior."""
+    name = getattr(args, "backbone", "resnet18")
+    return {
+        "backbone": name,
+        "weights": "IMAGENET1K_V1" if args.weights == "imagenet" else "random",
+        "image_size": args.image_size,
+        "preprocessing": "imagenet-resize256-centercrop224-v1" if name == "vit-b-16"
+                         else "resize-square-imagenet-normalize-v1",
+        # A inicializacao aleatoria tambem faz parte da identidade das features.
+        "random_seed": args.seed if args.weights == "random" else None,
+    }
+
+
+def backbone_transform(args: argparse.Namespace):
+    if getattr(args, "backbone", "resnet18") == "vit-b-16":
+        if args.image_size != 224:
+            raise ValueError("ViT-B/16 requer imagem 224x224.")
+        return ViT_B_16_Weights.IMAGENET1K_V1.transforms()
+    return image_transform(args.image_size)
 
 
 def image_transform(image_size: int) -> transforms.Compose:
@@ -77,16 +110,23 @@ def extract_or_load_features(
     """
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
-    cache_path = args.work_dir / (
-        f"features_resnet18_{args.weights}_{args.image_size}px.pt"
-    )
+    spec = feature_spec(args)
+    name = spec["backbone"]
+    # Mantem o nome historico da ResNet. O ViT registra tambem o pre-processamento.
+    tag = "_resize256_crop224_v1" if name == "vit-b-16" else ""
+    if args.weights == "random":
+        tag += f"_seed{args.seed}"
+    cache_path = args.work_dir / f"features_{name}_{args.weights}_{args.image_size}px{tag}.pt"
     fingerprint = records_fingerprint(records)
 
     # O cache so e reutilizado quando corresponde exatamente ao conjunto atual
     # de registros. --recompute-features permite ignora-lo explicitamente.
     if cache_path.is_file() and not args.recompute_features:
         cached = _safe_torch_load(cache_path)
-        if isinstance(cached, dict) and cached.get("fingerprint") == fingerprint:
+        legacy_resnet = name == "resnet18" and args.weights == "imagenet"
+        if (isinstance(cached, dict) and cached.get("fingerprint") == fingerprint
+                and (cached.get("feature_spec") == spec
+                     or ("feature_spec" not in cached and legacy_resnet))):
             print(f"Usando embeddings em cache: {cache_path}")
             features = cached["features_by_class"]
             input_dim = int(cached["input_dim"])
@@ -97,7 +137,7 @@ def extract_or_load_features(
     # extraidos; as particoes posteriores voltam a usar os nomes das classes.
     class_names = sorted({record.label for record in records})
     class_to_id = {name: index for index, name in enumerate(class_names)}
-    dataset = ImageRecordDataset(records, image_transform(args.image_size), class_to_id)
+    dataset = ImageRecordDataset(records, backbone_transform(args), class_to_id)
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -105,12 +145,13 @@ def extract_or_load_features(
         num_workers=args.num_workers,
         pin_memory=device.type == "cuda",
     )
-    backbone, input_dim = build_resnet18(args.weights)
+    builder = build_vit_b_16 if name == "vit-b-16" else build_resnet18
+    backbone, input_dim = builder(args.weights)
     backbone.to(device)
 
     feature_batches: list[torch.Tensor] = []
     label_batches: list[torch.Tensor] = []
-    print(f"Extraindo embeddings com ResNet-18 em {device}...")
+    print(f"Extraindo embeddings com {name} ({spec['weights']}) em {device}...")
     # inference_mode economiza memoria porque o backbone esta congelado e nao
     # participara do meta-treino.
     with torch.inference_mode():
@@ -129,6 +170,7 @@ def extract_or_load_features(
     torch.save(
         {
             "fingerprint": fingerprint,
+            "feature_spec": spec,
             "input_dim": input_dim,
             "class_names": class_names,
             "features_by_class": features_by_class,

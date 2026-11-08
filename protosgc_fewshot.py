@@ -2,7 +2,7 @@
 """Entrada do experimento ProtoNet + SGC.
 
 Execute como antes: ``python protosgc_fewshot.py --quick``.
-O fluxo está em ``proto_sgc/experiment.py``; consulte ``documentacao.md``
+O fluxo está em ``proto_sgc/experiment.py``; consulte ``README.md``
 para o mapa dos arquivos e a ordem sugerida de leitura.
 
 As importações abaixo preservam o acesso às funções e classes que antes

@@ -159,18 +159,10 @@ def _evaluate(
         f1_scores.append(f1)
         balanced_scores.append(balanced)
 
-    accuracy_array = np.asarray(accuracies, dtype=np.float64)
-
-    # Aproximacao normal: media +/- 1.96 * erro-padrao.
-    ci95 = (
-        1.96 * accuracy_array.std(ddof=1) / math.sqrt(n_episodes)
-        if n_episodes > 1
-        else 0.0
-    )
     return Metrics(
         loss=float(np.mean(losses)),
-        accuracy=float(accuracy_array.mean()),
-        ci95=float(ci95),
+        accuracy=float(np.mean(accuracies)),
+        ci95=_ci95(accuracies),
         macro_f1=float(np.mean(f1_scores)),
         macro_f1_ci95=_ci95(f1_scores),
         balanced_accuracy=float(np.mean(balanced_scores)),
@@ -181,6 +173,112 @@ def _evaluate(
 
 def _ci95(values):
     return float(1.96 * np.std(values, ddof=1) / math.sqrt(len(values))) if len(values) > 1 else 0.
+
+
+def _save_metrics(checkpoint_path: Path, result: dict) -> None:
+    """Grava o mesmo JSON nos modos com e sem otimizacao."""
+    checkpoint_path.with_suffix(".metrics.json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def evaluate_without_training(
+    model: ProtoSGC,
+    sampler: FeatureEpisodeSampler,
+    splits: dict[str, list[str]],
+    args: argparse.Namespace,
+    device: torch.device,
+) -> tuple[ProtoSGC, Metrics, Path]:
+    """Protocolo padrao sem otimizacao, preservando LayerNorm/L2 historicas.
+
+    Theta identidade mantem a dimensao bruta (512 ou 768). Validacao e teste
+    usam as mesmas seeds episodicas do modo treinado; nao ha selecao de estado.
+    """
+    if model.theta.in_features != model.theta.out_features:
+        raise ValueError("Sem treino requer Theta quadrada na dimensao do backbone.")
+    model.to(device)
+    with torch.no_grad():
+        model.theta.weight.copy_(torch.eye(model.theta.in_features, device=device))
+    model.requires_grad_(False)
+    model.eval()
+    val = evaluate(model, sampler, splits["val"], args.val_episodes,
+                   args.n_way, device, seed=args.seed + 202)
+    test = evaluate(model, sampler, splits["test"], args.test_episodes,
+                    args.n_way, device, seed=args.seed + 303)
+    # Snapshot fixo para reproducao, nao um checkpoint escolhido por validacao.
+    args.work_dir.mkdir(parents=True, exist_ok=True)
+    path = args.work_dir / f"fixed_{args.model}_{args.graph_type}_train-free.pt"
+    torch.save({"model_state_dict": model.state_dict(), "input_dim": model.theta.in_features,
+                "args": vars(args), "class_splits": splits}, path)
+    result = {
+        "schema_version": 2,
+        "args": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
+        "checkpoint": str(path), "class_splits": splits,
+        "selection_metric": None, "training_episodes_executed": 0,
+        "trainable_parameters": 0,
+        "representation": "identity_theta; fixed_default_layernorm; l2_normalization; fixed_logit_scale",
+        "metric_aggregation": "mean_per_episode; values in [0,1]; normal CI95 across episodes",
+        "validation": asdict(val), "test": asdict(test), "extra_context": None,
+    }
+    _save_metrics(path, result)
+    return model, test, path
+
+
+def _checkpoint_path(model, args, context_banks, use_global_rankings, reference_evaluation) -> Path:
+    """Preserva os nomes historicos dos checkpoints de cada protocolo."""
+    extra_count = getattr(args, "dgcg_extra_references", None)
+    query_context = (
+        getattr(args, "extra_images", None) is not None
+        and getattr(args, "extra_source", "reserved") == "queries"
+    )
+    extra_mode = args.extra_mode if context_banks is not None else "rankings"
+    # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
+    graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
+    if args.model == "proto-sgc" and args.graph_type.startswith("knn") and model.knn_metric != "euclidean":
+        graph_suffix = f"{graph_suffix}-{model.knn_metric}"
+    if args.model == "proto-sgc" and args.graph_type in DGCG_GRAPH_TYPES:
+        if args.dgcg_threshold is not None:
+            threshold_tag = f"t{args.dgcg_threshold:g}"
+        elif args.dgcg_target_density is not None:
+            density_low, density_high = args.dgcg_target_density
+            threshold_tag = f"auto-rho{density_low:g}-{density_high:g}"
+        else:
+            degree_low, degree_high = args.dgcg_target_degree
+            threshold_tag = f"auto-deg{degree_low:g}-{degree_high:g}"
+        threshold_tag = threshold_tag.replace(".", "p")
+        graph_suffix = (
+            f"{args.graph_type}-{args.dgcg_metric}-"
+            f"{args.dgcg_correlation}-{threshold_tag}"
+        )
+    if args.model == "proto-sgc" and args.cosine_rbf_weight:
+        sigma_tag = f"{args.graph_temperature:g}".replace(".", "p")
+        graph_suffix = f"{graph_suffix}-cosine-rbf-sigma{sigma_tag}"
+    if args.model == "proto-sgc" and args.grande:
+        sigma_tag = f"{args.grande_sigma:g}".replace(".", "p")
+        metric_tag = args.grande_metric
+        if args.grande_metric == "rbo":
+            metric_tag = f"rbo-p{args.grande_rbo_p:g}".replace(".", "p")
+        graph_suffix = f"{graph_suffix}-grande-{metric_tag}-sigma{sigma_tag}"
+    if use_global_rankings and reference_evaluation:
+        graph_suffix = f"{graph_suffix}-reference-train-rankings"
+    elif use_global_rankings:
+        graph_suffix = f"{graph_suffix}-train-global-rankings"
+    if extra_count is not None:
+        graph_suffix += f"-extra{extra_count}-bank{args.dgcg_extra_bank_per_class}"
+    if query_context:
+        phases_tag = '-'.join(
+            p for p in ("train", "val", "test") if p in args.extra_phases
+        )
+        graph_suffix += (
+            f"-query-context-pool{args.extra_bank_per_class}"
+            f"-use{args.extra_images}-{phases_tag}"
+        )
+    elif context_banks is not None:
+        phases_tag = '-'.join(p for p in ("train", "val", "test") if p in args.extra_phases)
+        graph_suffix += (f"-context{args.extra_images}-{extra_mode}-{phases_tag}"
+                         f"-bank{args.extra_bank_per_class}")
+    return args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
 
 
 def train_model(
@@ -266,52 +364,9 @@ def train_model(
     best_state = copy.deepcopy(model.state_dict())
     best_val_accuracy = -math.inf
     best_val_metrics = None
-    # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
-    graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
-    if args.model == "proto-sgc" and args.graph_type.startswith("knn") and model.knn_metric != "euclidean":
-        graph_suffix = f"{graph_suffix}-{model.knn_metric}"
-    if args.model == "proto-sgc" and args.graph_type in DGCG_GRAPH_TYPES:
-        if args.dgcg_threshold is not None:
-            threshold_tag = f"t{args.dgcg_threshold:g}"
-        elif args.dgcg_target_density is not None:
-            density_low, density_high = args.dgcg_target_density
-            threshold_tag = f"auto-rho{density_low:g}-{density_high:g}"
-        else:
-            degree_low, degree_high = args.dgcg_target_degree
-            threshold_tag = f"auto-deg{degree_low:g}-{degree_high:g}"
-        threshold_tag = threshold_tag.replace(".", "p")
-        graph_suffix = (
-            f"{args.graph_type}-{args.dgcg_metric}-"
-            f"{args.dgcg_correlation}-{threshold_tag}"
-        )
-    if args.model == "proto-sgc" and args.cosine_rbf_weight:
-        sigma_tag = f"{args.graph_temperature:g}".replace(".", "p")
-        graph_suffix = f"{graph_suffix}-cosine-rbf-sigma{sigma_tag}"
-    if args.model == "proto-sgc" and args.grande:
-        sigma_tag = f"{args.grande_sigma:g}".replace(".", "p")
-        metric_tag = args.grande_metric
-        if args.grande_metric == "rbo":
-            metric_tag = f"rbo-p{args.grande_rbo_p:g}".replace(".", "p")
-        graph_suffix = f"{graph_suffix}-grande-{metric_tag}-sigma{sigma_tag}"
-    if use_global_rankings and reference_evaluation:
-        graph_suffix = f"{graph_suffix}-reference-train-rankings"
-    elif use_global_rankings:
-        graph_suffix = f"{graph_suffix}-train-global-rankings"
-    if extra_count is not None:
-        graph_suffix += f"-extra{extra_count}-bank{args.dgcg_extra_bank_per_class}"
-    if query_context:
-        phases_tag = '-'.join(
-            p for p in ("train", "val", "test") if p in args.extra_phases
-        )
-        graph_suffix += (
-            f"-query-context-pool{args.extra_bank_per_class}"
-            f"-use{args.extra_images}-{phases_tag}"
-        )
-    elif context_banks is not None:
-        phases_tag = '-'.join(p for p in ("train", "val", "test") if p in args.extra_phases)
-        graph_suffix += (f"-context{args.extra_images}-{extra_mode}-{phases_tag}"
-                         f"-bank{args.extra_bank_per_class}")
-    checkpoint_path = args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
+    checkpoint_path = _checkpoint_path(
+        model, args, context_banks, use_global_rankings, reference_evaluation,
+    )
     # As medias moveis abaixo sao apenas para a barra de progresso; elas nao
     # interferem na loss otimizada nem na escolha do checkpoint.
     recent_losses: list[float] = []
@@ -444,7 +499,5 @@ def train_model(
             "supervision_and_metrics": "query_only; prototypes_from_support_only",
         } if context_banks is not None else None),
     }
-    checkpoint_path.with_suffix(".metrics.json").write_text(
-        json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8",
-    )
+    _save_metrics(checkpoint_path, result)
     return model, test_metrics, checkpoint_path
