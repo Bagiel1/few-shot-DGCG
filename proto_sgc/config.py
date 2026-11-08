@@ -363,7 +363,7 @@ def _add_training_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Le os argumentos; cada familia de opcoes e definida separadamente."""
     parser = argparse.ArgumentParser(
         description="ProtoNet + SGC transdutivo no Meta-Album Flowers Micro."
@@ -376,7 +376,7 @@ def parse_args() -> argparse.Namespace:
     _add_weighting_arguments(parser)
     _add_training_arguments(parser)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.image_size is None:
         args.image_size = 224 if args.backbone == "vit-b-16" else 128
 

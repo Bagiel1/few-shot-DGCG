@@ -287,6 +287,9 @@ def train_model(
     splits: dict[str, list[str]],
     args: argparse.Namespace,
     device: torch.device,
+    *,
+    on_episode=None,
+    on_validation=None,
 ) -> tuple[ProtoSGC, Metrics, Path]:
     """Executa meta-treino episodico, selecao por validacao e meta-teste.
 
@@ -406,6 +409,8 @@ def train_model(
         optimizer.step()
 
         accuracy = (logits.argmax(dim=1) == episode.query_y).float().mean().item()
+        if on_episode is not None:
+            on_episode(episode_index, episode, accuracy)
         recent_losses.append(loss.item())
         recent_accuracies.append(accuracy)
         if len(recent_losses) > 50:
@@ -431,6 +436,8 @@ def train_model(
                 extra_reference_bank=val_bank,
                 extra_mode=extra_mode,
             )
+            if on_validation is not None:
+                on_validation(episode_index, val_metrics)
             print(
                 f"\nEp. {episode_index:4d} | validacao: "
                 f"{100 * val_metrics.accuracy:.2f}% +/- "
