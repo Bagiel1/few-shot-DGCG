@@ -1,0 +1,32 @@
+{
+  "files": {
+    "status_features.csv": {
+      "sha256": "96bba60df41a83c1f770c88aaedc796d4ca54da0d0d5629bad5686e18ae1e780"
+    },
+    "resultados_features.csv": {
+      "sha256": "be3dcbd9f3b807c0128b504fffd38004f6298fe0bf22bbdd745644fe36fccff2"
+    },
+    "medias_features.csv": {
+      "sha256": "7e810d7966f69a2b9e4932dc05f62886e0104c1c07f413ba93e6426ac2f2885e"
+    }
+  },
+  "conditions": 240,
+  "new": 196,
+  "reused": 44,
+  "mean_groups": 80,
+  "seeds": [
+    7,
+    17,
+    27
+  ],
+  "checks": [
+    "complete_unique_grid",
+    "status_result_keys_match",
+    "all_groups_have_three_seeds",
+    "mean_and_sample_std_recomputed",
+    "gains_recomputed",
+    "44_reused_results_match_original_rows"
+  ],
+  "elapsed_seconds_new_runs": 1169.5241515841335,
+  "hardware_note": "196 novos resultados identificados como cuda; 44 resultados históricos GPU VM preservados com origem. Modelo da GPU não consta nos CSVs."
+}
