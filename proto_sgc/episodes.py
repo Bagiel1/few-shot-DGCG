@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from _collections_abc import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import torch
