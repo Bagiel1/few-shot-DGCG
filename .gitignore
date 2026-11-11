@@ -1,14 +1,17 @@
-.agents/
-.codex/
-proto_sgc/__pycache__/
+# Ambiente e dados locais
 venv/
 data/
-runs/
-proto_sgc/graphs/__pycache__
 
-# Organização: artefatos de execução locais e caches regeneráveis
+# Saídas de execução: checkpoints, logs e features em cache
+runs/
 resultados/execucoes/
-**/__pycache__/
+
+# Caches regeneráveis
+__pycache__/
+*.pyc
 **/_matplotlib_cache/
 **/node_modules
 *.xlsx.inspect.ndjson
+
+# Cópias de segurança locais das planilhas (o histórico fica no git)
+resultados/**/backups/
