@@ -1,0 +1,7 @@
+shot,seed,method,points,bases,pearson_train_homophily_final_test_gain
+1,7,knn-union,10,10,0.744004074792114
+1,7,both_graphs,20,10,0.7539554115695521
+1,7,dgcg-4-6,10,10,0.8784497844063504
+5,7,knn-union,10,10,0.7372504762355881
+5,7,both_graphs,20,10,0.7916357286433934
+5,7,dgcg-4-6,10,10,0.8507062522351612

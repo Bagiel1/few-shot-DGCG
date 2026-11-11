@@ -1,0 +1,3 @@
+seed,shot,points,expected_points,complete,pearson_query,pdf_seed7_pearson_query
+7,1,20,20,True,0.6895689730073288,0.6472814894037344
+7,5,20,20,True,0.7610307593086341,0.8612571004983662
