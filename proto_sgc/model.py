@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .config import (
+    COMPLETE_GRAPH_TYPES,
     DGCG_CORRELATIONS,
     DGCG_GRAPH_TYPES,
     DGCG_METRICS,
@@ -80,7 +81,7 @@ class ProtoSGC(nn.Module):
             raise ValueError(f"knn-metric deve ser um de {KNN_METRICS}.")
         if sgc_hops < 1:
             raise ValueError("sgc-hops deve ser >= 1.")
-        if cosine_rbf_weight and graph_temperature <= 0:
+        if (cosine_rbf_weight or graph_type == "complete-rbf") and graph_temperature <= 0:
             raise ValueError("graph-temperature deve ser > 0.")
         if grande_sigma <= 0:
             raise ValueError("grande-sigma deve ser > 0.")
@@ -91,10 +92,12 @@ class ProtoSGC(nn.Module):
             )
         if not 0.0 < grande_rbo_p < 1.0:
             raise ValueError("grande-rbo-p deve estar estritamente entre 0 e 1.")
-        if graph_type not in (*GRAPH_TYPES, *GRAPH_ALIASES):
+        if graph_type not in (*GRAPH_TYPES, *GRAPH_ALIASES, *COMPLETE_GRAPH_TYPES):
             raise ValueError(
                 f"graph-type deve ser um de {GRAPH_TYPES}; recebido: {graph_type!r}."
             )
+        if graph_type in COMPLETE_GRAPH_TYPES and (cosine_rbf_weight or grande):
+            raise ValueError("Grafos completos usam pesos proprios, sem GRaNDe ou RBF cosseno.")
         if dgcg_metric not in DGCG_METRICS:
             raise ValueError(
                 f"dgcg-metric deve ser um de {DGCG_METRICS}; recebido: {dgcg_metric!r}."
@@ -324,7 +327,17 @@ class ProtoSGC(nn.Module):
     ) -> torch.Tensor:
         """Despacha a topologia solicitada e, se pedido, substitui seus pesos."""
 
-        if self.graph_type in DGCG_GRAPH_TYPES:
+        if self.graph_type == "complete-rbf":
+            distances = torch.cdist(features, features, p=2)
+            adjacency = torch.exp(-distances.square() / (2 * self.graph_temperature**2))
+            adjacency.fill_diagonal_(0)
+        elif self.graph_type == "complete-rbo":
+            rankings = self.ranked_lists(features, min(self.dgcg_list_size, len(features)))
+            adjacency = self.dgcg_correlation_matrix(
+                rankings, correlation="rbo", rbo_p=self.dgcg_rbo_p,
+            )
+            adjacency.fill_diagonal_(0)
+        elif self.graph_type in DGCG_GRAPH_TYPES:
             adjacency = self.dgcg_adjacency(
                 features,
                 weighted=(

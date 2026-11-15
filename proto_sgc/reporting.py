@@ -28,6 +28,13 @@ def build_run_name(args, graph_type: str) -> str:
 def describe_run(args, graph_type, features_by_class, splits, run_name) -> None:
     """Mostra as escolhas efetivas do grafo e do contexto episodico."""
     print(f"\n=== Execucao: {args.model} / {run_name} ===")
+    if graph_type == "complete-rbf":
+        print(f"Todos os pares; peso exp(-d_euclidiana^2/(2*sigma^2)), sigma={args.graph_temperature:g}; "
+              "vetores brutos e pesos sem reescala. Propagacao com normalizacao SGC por graus.")
+    elif graph_type == "complete-rbo":
+        print(f"Todos os pares ponderados por RBO, p={args.dgcg_rbo_p:g}, "
+              f"profundidade ate {args.dgcg_top_k}; rankings euclidianos. "
+              "Propagacao com normalizacao SGC por graus.")
     if args.model == "proto-sgc" and args.cosine_rbf_weight:
         print(
             "Pesos de aresta: RBF da distancia cosseno "

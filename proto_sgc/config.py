@@ -17,6 +17,7 @@ DGCG_GRAPH_TYPES = ("dgcg", "dgcg-plus")
 
 # Mutual e reciprocal sao a mesma intersecao; nao duplicar no modo all.
 GRAPH_ALIASES = ("knn-mutual",)
+COMPLETE_GRAPH_TYPES = ("complete-rbo", "complete-rbf")
 
 # ``all`` nao aparece aqui porque e uma instrucao para executar, em sequencia,
 # todas as topologias abaixo; ele nao representa uma topologia propriamente dita.
@@ -127,15 +128,15 @@ def _add_model_arguments(parser: argparse.ArgumentParser) -> None:
     )
     group.add_argument(
         "--graph-type",
-        choices=(*GRAPH_TYPES, *GRAPH_ALIASES, "all"),
+        choices=(*GRAPH_TYPES, *GRAPH_ALIASES, *COMPLETE_GRAPH_TYPES, "all"),
         default="knn-union",
         help=(
             "Variante do grafo: knn-union reproduz o grafo atual (uniao com o "
             "transposto); knn-out usa i->kNN(i); knn-in inverte essas arestas; "
             "knn-reciprocal (alias knn-mutual) mantem apenas vizinhos mutuos; dgcg usa correlacao "
             "entre listas ranqueadas e limiar guiado por grau; dgcg-plus mantem "
-            "essa topologia e pondera as arestas por vizinhanca mutua; all testa "
-            "todas."
+            "essa topologia e pondera as arestas por vizinhanca mutua; complete-rbo "
+            "e complete-rbf ponderam todos os pares. all preserva a lista historica."
         ),
     )
     group.add_argument("--sgc-hops", type=int, default=2)
@@ -271,10 +272,11 @@ def _add_context_arguments(parser: argparse.ArgumentParser) -> None:
         ),
     )
     group.add_argument(
-        "--extra-source", choices=("reserved", "queries"), default="reserved",
+        "--extra-source", choices=("reserved", "queries", "split-pool"), default="reserved",
         help=(
             "reserved usa o banco separado antigo; queries separa as extras das "
-            "queries sorteadas no mesmo episodio mestre."
+            "queries sorteadas no mesmo episodio mestre; split-pool sorteia de "
+            "toda a particao, excluindo suporte e queries, sem balancear classes."
         ),
     )
 
@@ -332,8 +334,8 @@ def _add_weighting_arguments(parser: argparse.ArgumentParser) -> None:
         type=float,
         default=0.2,
         help=(
-            "Sigma usado somente pela ablacao --cosine-rbf-weight. "
-            "Nao interfere nos grafos padrao."
+            "Sigma do complete-rbf (distancia euclidiana bruta) ou da ablacao "
+            "--cosine-rbf-weight. Nao interfere nos grafos binarios padrao."
         ),
     )
 
@@ -405,7 +407,7 @@ def validate_hyperparameters(args: argparse.Namespace) -> None:
     if context_count is not None:
         if context_count < 0 or args.extra_bank_per_class < 1:
             raise ValueError("extra-images deve ser >= 0 e extra-bank-per-class >= 1.")
-        if context_count > args.n_way * args.extra_bank_per_class:
+        if args.extra_source != "split-pool" and context_count > args.n_way * args.extra_bank_per_class:
             raise ValueError("Extras excedem n-way * extra-bank-per-class.")
         if len(set(args.extra_phases)) != len(args.extra_phases):
             raise ValueError("extra-phases nao aceita fases repetidas.")
@@ -421,6 +423,8 @@ def validate_hyperparameters(args: argparse.Namespace) -> None:
                 raise ValueError("Extras vindas de queries devem ser divisiveis por n-way.")
             if args.extra_mode != "propagation":
                 raise ValueError("Extras vindas de queries usam somente o modo propagation.")
+        if args.extra_source == "split-pool" and args.extra_mode != "propagation":
+            raise ValueError("Extras split-pool usam somente o modo propagation.")
     extra = getattr(args, "dgcg_extra_references", None)
     if extra is not None:
         if args.model != "proto-sgc" or args.graph_type not in DGCG_GRAPH_TYPES:
@@ -459,8 +463,10 @@ def validate_hyperparameters(args: argparse.Namespace) -> None:
         raise ValueError(f"Estes parametros devem ser >= 1: {invalid}")
     if args.learning_rate <= 0 or args.weight_decay < 0 or args.grad_clip <= 0:
         raise ValueError("learning-rate e grad-clip devem ser > 0; weight-decay deve ser >= 0.")
-    if args.cosine_rbf_weight and args.graph_temperature <= 0:
+    if (args.cosine_rbf_weight or args.graph_type == "complete-rbf") and args.graph_temperature <= 0:
         raise ValueError("graph-temperature deve ser > 0.")
+    if args.graph_type in COMPLETE_GRAPH_TYPES and (args.cosine_rbf_weight or args.grande):
+        raise ValueError("Grafos completos desta bateria usam seus proprios pesos, sem GRaNDe ou RBF cosseno.")
     if args.grande_sigma <= 0:
         raise ValueError("grande-sigma deve ser > 0.")
     if not 0.0 < args.grande_rbo_p < 1.0:

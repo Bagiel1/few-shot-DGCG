@@ -22,7 +22,7 @@ from .model import ProtoSGC
 from .graphs.training_rankings import TrainingRankings
 from .graphs.training_rankings import build_reference_ranked_lists
 from .graphs.dgcg import dgcg_correlation_matrix
-from .reference_bank import ExtraReferenceBank, QueryContextBank
+from .reference_bank import ExtraReferenceBank, QueryContextBank, SplitPoolBank
 from .metrics import classification_scores, record_graphs
 
 
@@ -66,6 +66,16 @@ def prepare_extra_banks(sampler, splits, args):
     count = getattr(args, "extra_images", None)
     if count is None:
         return None
+    if getattr(args, "extra_source", "reserved") == "split-pool":
+        classes = [label for phase in ("train", "val", "test") for label in splits[phase]]
+        if len(set(classes)) != len(classes):
+            raise ValueError("Classes de treino, validacao e teste devem ser disjuntas.")
+        return {
+            phase: SplitPoolBank(sampler, splits[phase],
+                                 count=count if phase in args.extra_phases else 0,
+                                 seed=args.seed + offset)
+            for phase, offset in (("train", 4101), ("val", 4202), ("test", 4303))
+        }
     if getattr(args, "extra_source", "reserved") == "queries":
         active_per_class = count // sampler.n_way
         return {
@@ -235,6 +245,11 @@ def _checkpoint_path(model, args, context_banks, use_global_rankings, reference_
     extra_mode = args.extra_mode if context_banks is not None else "rankings"
     # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
     graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
+    if args.model == "proto-sgc" and args.graph_type == "complete-rbf":
+        graph_suffix += f"-sigma{args.graph_temperature:g}".replace(".", "p")
+    elif args.model == "proto-sgc" and args.graph_type == "complete-rbo":
+        graph_suffix += (f"-{args.dgcg_metric}-p{args.dgcg_rbo_p:g}"
+                         f"-L{args.dgcg_list_size}-depth{args.dgcg_top_k}").replace(".", "p")
     if args.model == "proto-sgc" and args.graph_type.startswith("knn") and model.knn_metric != "euclidean":
         graph_suffix = f"{graph_suffix}-{model.knn_metric}"
     if args.model == "proto-sgc" and args.graph_type in DGCG_GRAPH_TYPES:
@@ -278,6 +293,8 @@ def _checkpoint_path(model, args, context_banks, use_global_rankings, reference_
         phases_tag = '-'.join(p for p in ("train", "val", "test") if p in args.extra_phases)
         graph_suffix += (f"-context{args.extra_images}-{extra_mode}-{phases_tag}"
                          f"-bank{args.extra_bank_per_class}")
+        if args.extra_source == "split-pool":
+            graph_suffix += "-split-pool"
     return args.work_dir / f"best_{args.model}_{graph_suffix}.pt"
 
 
@@ -318,6 +335,9 @@ def train_model(
                 f"totais efetivos por episodio={ {p: b.count for p, b in context_banks.items()} }. "
                 "As queries de contexto nao fornecem rotulos; loss/metricas usam somente as queries avaliadas."
             )
+        elif args.extra_source == "split-pool":
+            print(f"Extras de toda a particao: {args.extra_images}; fases={args.extra_phases}. "
+                  "Sorteio sem reposicao, excluindo suporte e queries; sem balanceamento por classe.")
         else:
             print(f"Extras: modo={extra_mode}; fases={','.join(args.extra_phases)}; "
                   f"totais efetivos por episodio="
@@ -494,15 +514,15 @@ def train_model(
         "validation": asdict(best_val_metrics), "test": asdict(test_metrics),
         "extra_context": ({
             "mode": extra_mode,
-            "source": (
-                "queries_from_same_master_episode"
-                if query_context else "reserved_reference_bank"
-            ),
+            "source": {"queries": "queries_from_same_master_episode", "split-pool": "split-pool"}.get(
+                args.extra_source, "reserved_reference_bank"),
             "phases": args.extra_phases,
             "requested_total": args.extra_images,
             "banks": {p: b.metadata() for p, b in context_banks.items()},
             "labels_exposed_to_model": False, "pseudo_labels": False,
-            "sampling": "same_episode_classes_balanced; labels_used_only_by_sampler",
+            "sampling": ("all_split_classes_uniform_images_without_replacement"
+                         if args.extra_source == "split-pool"
+                         else "same_episode_classes_balanced; labels_used_only_by_sampler"),
             "supervision_and_metrics": "query_only; prototypes_from_support_only",
         } if context_banks is not None else None),
     }

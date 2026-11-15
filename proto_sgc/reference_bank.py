@@ -1,11 +1,61 @@
 """Banco reservado de imagens nao rotuladas das classes de um episodio."""
 
 from collections.abc import Sequence
+import hashlib
+import json
 
 import numpy as np
 import torch
 
 from .episodes import Episode, FeatureEpisodeSampler
+
+
+class SplitPoolBank:
+    """Extras aninhadas de toda a particao, sem repetir suporte ou queries.
+
+    O RNG do episodio nao e consumido para escolher extras. A permutacao do
+    pool depende da seed da fase e das identidades das imagens avaliadas.
+    """
+
+    def __init__(self, sampler, classes, *, count, seed):
+        self.sampler = sampler
+        self.classes = sorted(classes)
+        self.count = count
+        self.seed = seed
+        self.ids = [(label, i) for label in self.classes
+                    for i in range(len(sampler.features_by_class[label]))]
+        self.features = torch.cat([sampler.features_by_class[label] for label in self.classes])
+        self.row_by_id = {item: i for i, item in enumerate(self.ids)}
+        capacity = len(self.ids) - sampler.n_way * (sampler.n_shot + sampler.n_query)
+        if not 0 <= count <= capacity:
+            raise ValueError(f"Extras solicitadas: {count}; capacidade disjunta da particao: {capacity}.")
+        self.last_extra_ids = ()
+        self.episode_digest = hashlib.sha256()
+        self.episodes_sampled = 0
+
+    def sample(self, rng):
+        episode = self.sampler.sample(self.classes, rng)
+        self.episode_digest.update(json.dumps(episode.sample_ids, separators=(",", ":")).encode())
+        self.episodes_sampled += 1
+        return episode
+
+    def extra_features(self, episode):
+        excluded = {self.row_by_id[item] for item in episode.sample_ids}
+        payload = json.dumps([self.seed, episode.sample_ids], separators=(",", ":"))
+        seed = int.from_bytes(hashlib.sha256(payload.encode()).digest()[:8], "big")
+        order = np.random.default_rng(seed).permutation(len(self.ids))
+        available = np.ones(len(self.ids), dtype=bool)
+        available[list(excluded)] = False
+        selected = order[available[order]][:self.count].tolist()
+        self.last_extra_ids = tuple(self.ids[i] for i in selected)
+        return self.features[torch.tensor(selected, dtype=torch.long)]
+
+    def metadata(self):
+        return {"kind": "split_pool", "count": self.count, "seed": self.seed,
+                "classes": self.classes, "pool_size": len(self.ids),
+                "episodes_sampled": self.episodes_sampled,
+                "episode_ids_sha256": self.episode_digest.hexdigest(),
+                "sampling": "uniform_images_without_replacement; excludes_support_and_query; nested_prefix"}
 
 
 class ExtraReferenceBank:
