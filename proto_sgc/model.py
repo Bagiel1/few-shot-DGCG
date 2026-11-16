@@ -63,6 +63,7 @@ class ProtoSGC(nn.Module):
         dgcg_target_density: tuple[float, float] | list[float] | None = None,
         dgcg_rbo_p: float = 0.9,
         knn_metric: str = "euclidean",
+        rbf_sigma_mode: str = "fixed",
     ) -> None:
         """Configura a projecao aprendivel e todas as variantes de grafo.
 
@@ -81,6 +82,8 @@ class ProtoSGC(nn.Module):
             raise ValueError(f"knn-metric deve ser um de {KNN_METRICS}.")
         if sgc_hops < 1:
             raise ValueError("sgc-hops deve ser >= 1.")
+        if rbf_sigma_mode not in ("fixed", "episode-median"):
+            raise ValueError("rbf-sigma-mode deve ser fixed ou episode-median.")
         if (cosine_rbf_weight or graph_type == "complete-rbf") and graph_temperature <= 0:
             raise ValueError("graph-temperature deve ser > 0.")
         if grande_sigma <= 0:
@@ -135,6 +138,8 @@ class ProtoSGC(nn.Module):
         self.graph_type = graph_type
         self.sgc_hops = sgc_hops
         self.graph_temperature = graph_temperature
+        self.rbf_sigma_mode = rbf_sigma_mode
+        self.last_rbf_sigma = None
         self.grande = grande
         self.grande_sigma = grande_sigma
         self.grande_metric = grande_metric
@@ -329,7 +334,15 @@ class ProtoSGC(nn.Module):
 
         if self.graph_type == "complete-rbf":
             distances = torch.cdist(features, features, p=2)
-            adjacency = torch.exp(-distances.square() / (2 * self.graph_temperature**2))
+            sigma = distances.new_tensor(self.graph_temperature)
+            if self.rbf_sigma_mode == "episode-median":
+                pairs = torch.triu_indices(len(features), len(features), offset=1, device=features.device)
+                pair_distances = distances[pairs[0], pairs[1]]
+                if pair_distances.numel():
+                    sigma = torch.quantile(pair_distances, .5)
+                sigma = sigma.clamp_min(torch.finfo(distances.dtype).eps)
+            self.last_rbf_sigma = sigma.detach()
+            adjacency = torch.exp(-distances.square() / (2 * sigma.square()))
             adjacency.fill_diagonal_(0)
         elif self.graph_type == "complete-rbo":
             rankings = self.ranked_lists(features, min(self.dgcg_list_size, len(features)))

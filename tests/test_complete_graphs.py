@@ -45,6 +45,21 @@ class CompleteGraphTests(unittest.TestCase):
         expected.fill_diagonal_(0)
         torch.testing.assert_close(self.model("complete-rbo").graph_adjacency(x), expected)
 
+    def test_episode_median_uses_unique_pairs_and_changes_with_extra_nodes(self):
+        model = ProtoSGC(4,4,"proto-sgc",5,"complete-rbf",2,32.,rbf_sigma_mode="episode-median")
+        x = torch.tensor([[0.,0.,0.,0.],[3.,4.,0.,0.],[6.,8.,0.,0.]])
+        raw = model.graph_adjacency(x)
+        self.assertEqual(float(model.last_rbf_sigma),5.)  # Distances 5, 5, 10.
+        self.assertAlmostEqual(float(raw[0,1]),math.exp(-.5),places=6)
+        extended = torch.cat((x,torch.tensor([[60.,80.,0.,0.]])))
+        model.graph_adjacency(extended)
+        self.assertEqual(float(model.last_rbf_sigma),50.)  # Median of 5,5,10,90,95,100.
+        scaled = model.graph_adjacency(10*x)
+        torch.testing.assert_close(scaled,raw)
+        zero = model.graph_adjacency(torch.zeros(4,4))
+        self.assertTrue(torch.isfinite(zero).all())
+        torch.testing.assert_close(zero,torch.ones(4,4)-torch.eye(4))
+
     def test_extras_are_disjoint_nested_and_do_not_change_evaluated_images(self):
         features = {str(k): torch.arange(k*80, (k+1)*80).reshape(20,4).float() for k in range(8)}
         sampler = FeatureEpisodeSampler(features, 2, 5, 5)
@@ -81,6 +96,10 @@ class CompleteGraphTests(unittest.TestCase):
         config = battery.arguments(args,controls[0],[10,5,5])
         self.assertEqual(config.model,'protonet')
         self.assertEqual(config.extra_images,0)
+        rbf = next(j for j in jobs if j['metodo']=='complete-rbf')
+        self.assertEqual(rbf['rbf_sigma_mode'],'episode-median')
+        self.assertIsNone(rbf['rbf_sigma'])
+        self.assertEqual(battery.arguments(args,rbf,[10,5,5]).rbf_sigma_mode,'episode-median')
         self.assertEqual({(j['n_way'],j['n_shot'],j['n_query']) for j in jobs},set(battery.PROTOCOLS.values()))
         self.assertEqual(len({(j['version'],j['protocol'],j['metodo']) for j in jobs if j['metodo']!='no-graph'}),16)
         self.assertEqual({j['openml_id'] for j in jobs if j['version']=='mini'},set(range(44281,44291)))

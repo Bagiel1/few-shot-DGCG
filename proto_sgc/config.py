@@ -331,6 +331,10 @@ def _add_weighting_arguments(parser: argparse.ArgumentParser) -> None:
         ),
     )
     group.add_argument(
+        "--rbf-sigma-mode", choices=("fixed", "episode-median"), default="fixed",
+        help="complete-rbf: sigma fixo ou mediana das distancias entre pares distintos do episodio.",
+    )
+    group.add_argument(
         "--graph-temperature",
         type=float,
         default=0.2,

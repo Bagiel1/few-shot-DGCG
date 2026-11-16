@@ -33,6 +33,7 @@ class GraphStatistics:
         self.rows = []
         self.columns = []
         self.densities = []
+        self.rbf_sigmas = []
         self.degree_target = None
         self.candidate_limit = None
 
@@ -66,6 +67,9 @@ class GraphStatistics:
             "density_mean": float(np.mean(self.densities)),
             "density_std": float(np.std(self.densities)),
         }
+        if self.rbf_sigmas:
+            result.update(rbf_sigma_mean=float(np.mean(self.rbf_sigmas)),
+                          rbf_sigma_min=min(self.rbf_sigmas), rbf_sigma_max=max(self.rbf_sigmas))
         if self.degree_target is not None:
             candidates = min(self.candidate_limit, len(self.rows[0]) - 1)
             low, high = (min(value, candidates) for value in self.degree_target)
@@ -89,7 +93,12 @@ def record_graphs(model):
         statistics.degree_target = model.dgcg_target_degree
         statistics.candidate_limit = min(model.dgcg_candidate_k, model.dgcg_list_size - 1)
     previous = getattr(model, "graph_observer", None)
-    model.graph_observer = statistics.update
+    def observe(adjacency):
+        statistics.update(adjacency)
+        statistics.rbf_sigmas.append(float(model.last_rbf_sigma))
+
+    model.graph_observer = (observe if model.model_name == "proto-sgc" and model.graph_type == "complete-rbf"
+                            else statistics.update)
     try:
         yield statistics
     finally:

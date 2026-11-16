@@ -29,7 +29,9 @@ def describe_run(args, graph_type, features_by_class, splits, run_name) -> None:
     """Mostra as escolhas efetivas do grafo e do contexto episodico."""
     print(f"\n=== Execucao: {args.model} / {run_name} ===")
     if graph_type == "complete-rbf":
-        print(f"Todos os pares; peso exp(-d_euclidiana^2/(2*sigma^2)), sigma={args.graph_temperature:g}; "
+        sigma_description = ("mediana por episodio" if args.rbf_sigma_mode == "episode-median"
+                             else f"{args.graph_temperature:g}")
+        print(f"Todos os pares; peso exp(-d_euclidiana^2/(2*sigma^2)), sigma={sigma_description}; "
               "vetores brutos e pesos sem reescala. Propagacao com normalizacao SGC por graus.")
     elif graph_type == "complete-rbo":
         print(f"Todos os pares ponderados por RBO, p={args.dgcg_rbo_p:g}, "

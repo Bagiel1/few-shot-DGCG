@@ -107,6 +107,7 @@ def main() -> None:
             graph_type=graph_type,
             sgc_hops=args.sgc_hops,
             graph_temperature=args.graph_temperature,
+            rbf_sigma_mode=args.rbf_sigma_mode,
             grande=args.grande,
             grande_sigma=args.grande_sigma,
             grande_metric=args.grande_metric,

@@ -246,7 +246,10 @@ def _checkpoint_path(model, args, context_banks, use_global_rankings, reference_
     # O sufixo registra no nome do checkpoint as escolhas que alteram o grafo.
     graph_suffix = args.graph_type if args.model == "proto-sgc" else "no-graph"
     if args.model == "proto-sgc" and args.graph_type == "complete-rbf":
-        graph_suffix += f"-sigma{args.graph_temperature:g}".replace(".", "p")
+        if model.rbf_sigma_mode == "episode-median":
+            graph_suffix += "-sigma-episode-median"
+        else:
+            graph_suffix += f"-sigma{args.graph_temperature:g}".replace(".", "p")
     elif args.model == "proto-sgc" and args.graph_type == "complete-rbo":
         graph_suffix += (f"-{args.dgcg_metric}-p{args.dgcg_rbo_p:g}"
                          f"-L{args.dgcg_list_size}-depth{args.dgcg_top_k}").replace(".", "p")

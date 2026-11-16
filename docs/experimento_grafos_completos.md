@@ -27,9 +27,21 @@ permanecem separados. O CSV inclui `gain_vs_no_graph_pp`.
 O grafo contem suporte, queries e extras. A matriz e construida nos vetores
 congelados, antes de Theta. Nao ha selecao kNN nem limiar DGCG.
 
-RBF: `exp(-||xi-xj||² / (2 * 32²))`. A distancia euclidiana usa os vetores
-brutos. Os pesos sao os valores diretos do kernel, sem softmax nem reescala.
-Sigma 32 e fixo em todas as bases, escalas, protocolos e quantidades de extras.
+RBF: `exp(-||xi-xj||² / (2 * sigma_episodio²))`. A distancia euclidiana
+usa os vetores brutos. Sigma e a mediana das distancias entre todos os
+pares distintos de nos do episodio, incluindo suportes, queries e extras.
+Cada par entra uma vez, sem diagonal, e a mediana de uma quantidade par
+usa a media dos dois valores centrais. O calculo usa somente vetores,
+sem rotulos. Sigma e recalculado em cada episodio de treino, validacao e
+teste e pode mudar quando entram mais extras.
+
+Os pesos sao os valores diretos do kernel, sem softmax nem reescala.
+Uma mediana zero e limitada ao epsilon do tipo numerico para evitar
+divisao por zero. As metricas de validacao e teste registram a media,
+o minimo e o maximo dos sigmas efetivamente usados.
+
+O modo fixo continua disponivel explicitamente com
+`--rbf-sigma-mode fixed --rbf-sigma 32`, usando outra pasta de resultados.
 
 RBO: rankings euclidianos com o proprio no na primeira posicao, como no
 DGCG existente. Usa p=0,9, lista limitada a 200 e profundidade limitada a
@@ -113,7 +125,7 @@ Recriar CSV e graficos com os resultados salvos:
 bash scripts/buscar_grafos_completos.sh --summarize-only
 ```
 
-A saida padrao e `runs/grafos_completos_extras_seed7/`, com
+A saida padrao e `runs/grafos_completos_extras_mediana_seed7/`, com
 `resultados.csv`, `progress.json` e os 16 PNGs em `graficos/`.
 Graficos de execucoes parciais mostram somente pontos concluidos.
 Caches de features ficam em `_features/BASE_ESCALA/`, compartilhados

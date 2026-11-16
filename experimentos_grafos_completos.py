@@ -31,10 +31,11 @@ def parser():
     p.add_argument("--graphs", nargs="+", choices=GRAPHS, default=list(GRAPHS))
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--extras-step", type=int, choices=(5, 10), default=10)
+    p.add_argument("--rbf-sigma-mode", choices=("episode-median", "fixed"), default="episode-median")
     p.add_argument("--rbf-sigma", type=float, default=32.)
     p.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     p.add_argument("--cache-dir", type=Path, default=Path("data/openml"))
-    p.add_argument("--output-root", type=Path, default=Path("runs/grafos_completos_extras_seed7"))
+    p.add_argument("--output-root", type=Path, default=Path("runs/grafos_completos_extras_mediana_seed7"))
     p.add_argument("--feature-root", type=Path, default=None,
                    help="Cache de vetores por base, compartilhado entre todas as condicoes.")
     p.add_argument("--cpu-threads", type=int, default=1)
@@ -61,7 +62,8 @@ def jobs(args):
             yield dict(dataset=f"{family}_{version}", family=family, version=version,
                        openml_id=openml_id, protocol=protocol, n_way=way, n_shot=shot,
                        n_query=query, seed=args.seed, metodo=graph, extras_total=extras,
-                       rbf_sigma=args.rbf_sigma if graph == "complete-rbf" else None,
+                       rbf_sigma_mode=args.rbf_sigma_mode if graph == "complete-rbf" else None,
+                       rbf_sigma=args.rbf_sigma if graph == "complete-rbf" and args.rbf_sigma_mode == "fixed" else None,
                        directory=str(folder))
 
 
@@ -90,6 +92,7 @@ def arguments(args, job, split_sizes):
             "--extra-images", str(job["extras_total"]), "--extra-source", "split-pool",
             "--extra-mode", "propagation", "--extra-phases", "train", "val", "test",
             "--graph-temperature", str(args.rbf_sigma), "--no-grande",
+            "--rbf-sigma-mode", args.rbf_sigma_mode,
             "--dgcg-metric", "euclidean", "--dgcg-correlation", "rbo",
             "--dgcg-rbo-p", "0.9", "--dgcg-top-k", "40", "--dgcg-list-size", "200",
             "--train-episodes", str(args.train_episodes), "--val-episodes", str(args.val_episodes),
@@ -170,7 +173,8 @@ def run_job(args, job, features, split_sizes, spec, provenance, device, digest):
     sampler = FeatureEpisodeSampler(features, job["n_way"], job["n_shot"], job["n_query"])
     splits = split_classes(sorted(features), job["n_way"], split_sizes, args.seed)
     seed_everything(args.seed)
-    model = ProtoSGC(512, 256, config.model, 5, config.graph_type, 2, args.rbf_sigma)
+    model = ProtoSGC(512, 256, config.model, 5, config.graph_type, 2, args.rbf_sigma,
+                     rbf_sigma_mode=config.rbf_sigma_mode)
     atomic_json(folder / "status.json", {"status": "running", "job": job})
     started = time.perf_counter()
     try:
@@ -248,7 +252,8 @@ def plot(args, records):
                 ax.axhline(baseline[0]["test_accuracy"], color=color, linestyle="--", linewidth=.9, alpha=.65,
                            label="_nolegend_" if rows else family.replace("_", " ") + " (sem grafo)")
         way, shot, query = PROTOCOLS[protocol]
-        graph_label = "RBO (p=0,9)" if graph == "complete-rbo" else f"RBF euclidiano (sigma={args.rbf_sigma:g})"
+        sigma_label = "mediana por episodio" if args.rbf_sigma_mode == "episode-median" else f"{args.rbf_sigma:g}"
+        graph_label = "RBO (p=0,9)" if graph == "complete-rbo" else f"RBF euclidiano (sigma={sigma_label})"
         ax.set_title(f"{version.title()} | {way}-way, {shot}-shot, {query}-query | {graph_label}")
         ax.set_xlabel("Imagens extras por episodio (treino, validacao e teste)")
         ax.set_ylabel("Acuracia de teste (%)")
