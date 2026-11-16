@@ -72,10 +72,17 @@ class CompleteGraphTests(unittest.TestCase):
     def test_defaults_and_new_mode_validation(self):
         args = battery.parser().parse_args([])
         jobs = list(battery.jobs(args))
-        self.assertEqual(len(jobs),2560)
-        self.assertEqual(len({j['directory'] for j in jobs}),2560)
+        self.assertEqual(len(jobs),2640)
+        self.assertEqual(len({j['directory'] for j in jobs}),2640)
+        controls = [j for j in jobs if j['metodo']=='no-graph']
+        self.assertEqual(len(controls),80)
+        self.assertTrue(all(j['extras_total']==0 for j in controls))
+        self.assertEqual(len({(j['dataset'],j['protocol']) for j in controls}),80)
+        config = battery.arguments(args,controls[0],[10,5,5])
+        self.assertEqual(config.model,'protonet')
+        self.assertEqual(config.extra_images,0)
         self.assertEqual({(j['n_way'],j['n_shot'],j['n_query']) for j in jobs},set(battery.PROTOCOLS.values()))
-        self.assertEqual(len({(j['version'],j['protocol'],j['metodo']) for j in jobs}),16)
+        self.assertEqual(len({(j['version'],j['protocol'],j['metodo']) for j in jobs if j['metodo']!='no-graph'}),16)
         self.assertEqual({j['openml_id'] for j in jobs if j['version']=='mini'},set(range(44281,44291)))
         core = parse_args(['--extra-images','200','--extra-source','split-pool','--extra-mode','propagation',
                            '--graph-type','complete-rbf','--graph-temperature','32'])

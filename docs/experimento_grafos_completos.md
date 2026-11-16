@@ -12,8 +12,15 @@
 - 2.000 episodios de treino, 200 de validacao a cada 200 passos,
   1.000 de teste. Checkpoint escolhido pela acuracia de validacao.
 
-Sao 2.560 condicoes (880 Micro e 1.680 Mini) e 16 graficos, cada um com
-uma curva por base. Os protocolos e escalas permanecem separados.
+Sao 2.560 condicoes com grafo (880 Micro e 1.680 Mini) e 80 controles
+sem grafo, totalizando 2.640 condicoes. Cada controle e treinado uma unica
+vez por base, escala e protocolo, com seed 7 e zero extras. A projecao,
+LayerNorm e escala dos logits sao treinadas com o mesmo orcamento e os
+mesmos suportes/queries do respectivo protocolo com grafo.
+
+Sao 16 graficos, cada um com uma curva por base e a referencia sem grafo
+como linha horizontal tracejada na mesma cor. Os protocolos e escalas
+permanecem separados. O CSV inclui `gain_vs_no_graph_pp`.
 
 ## Grafo e pesos
 

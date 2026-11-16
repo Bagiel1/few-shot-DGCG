@@ -52,8 +52,9 @@ def jobs(args):
     for family, version in itertools.product(args.datasets, args.versions):
         openml_id = DATASETS[family + "_micro"] + (44 if version == "mini" else 0)
         maximum = 100 if version == "micro" else 200
-        for protocol, graph, extras in itertools.product(
-                args.protocols, args.graphs, range(0, maximum + 1, args.extras_step)):
+        conditions = [("no-graph", 0)] + list(itertools.product(
+            args.graphs, range(0, maximum + 1, args.extras_step)))
+        for protocol, (graph, extras) in itertools.product(args.protocols, conditions):
             way, shot, query = PROTOCOLS[protocol]
             folder = (args.output_root / f"{family}_{version}" / protocol
                       / f"seed{args.seed}" / graph / f"extras{extras}")
@@ -77,9 +78,11 @@ def code_digest():
 def arguments(args, job, split_sizes):
     from proto_sgc.config import parse_args, validate_hyperparameters
 
+    no_graph = job["metodo"] == "no-graph"
     argv = ["--openml-id", str(job["openml_id"]), "--backbone", "resnet18",
             "--weights", "imagenet", "--image-size", "128", "--feature-dim", "256",
-            "--model", "proto-sgc", "--graph-type", job["metodo"], "--sgc-hops", "2",
+            "--model", "protonet" if no_graph else "proto-sgc",
+            "--graph-type", "knn-union" if no_graph else job["metodo"], "--sgc-hops", "2",
             "--class-split", *map(str, split_sizes), "--n-way", str(job["n_way"]),
             "--n-shot", str(job["n_shot"]), "--n-query", str(job["n_query"]),
             "--seed", str(job["seed"]), "--device", args.device,
@@ -167,7 +170,7 @@ def run_job(args, job, features, split_sizes, spec, provenance, device, digest):
     sampler = FeatureEpisodeSampler(features, job["n_way"], job["n_shot"], job["n_query"])
     splits = split_classes(sorted(features), job["n_way"], split_sizes, args.seed)
     seed_everything(args.seed)
-    model = ProtoSGC(512, 256, "proto-sgc", 5, job["metodo"], 2, args.rbf_sigma)
+    model = ProtoSGC(512, 256, config.model, 5, config.graph_type, 2, args.rbf_sigma)
     atomic_json(folder / "status.json", {"status": "running", "job": job})
     started = time.perf_counter()
     try:
@@ -209,6 +212,11 @@ def summarize(args, plan, digest):
                 raise ValueError(f"Episodios nao pareados entre condicoes: {scope}, {phase}")
             row[f"{phase}_episode_ids_sha256"] = bank["episode_ids_sha256"]
         records.append(row)
+    baselines = {(r["dataset"], r["protocol"], r["seed"]): r["test_accuracy"]
+                 for r in records if r["metodo"] == "no-graph"}
+    for row in records:
+        baseline = baselines.get((row["dataset"], row["protocol"], row["seed"]))
+        row["gain_vs_no_graph_pp"] = row["test_accuracy"] - baseline if baseline is not None else ""
     atomic_json(args.output_root / "progress.json", dict(complete=len(records), planned=len(plan)))
     save_csv(args.output_root / "resultados.csv", records)
     return records
@@ -218,26 +226,41 @@ def plot(args, records):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
 
     folder = args.output_root / "graficos"
     folder.mkdir(exist_ok=True)
     for version, protocol, graph in itertools.product(args.versions, args.protocols, args.graphs):
         fig, ax = plt.subplots(figsize=(10, 6))
-        for family in args.datasets:
+        has_baseline = False
+        for index, family in enumerate(args.datasets):
+            color = plt.get_cmap("tab10")(index % 10)
             rows = sorted([r for r in records if (r["family"], r["version"], r["protocol"], r["metodo"])
                            == (family, version, protocol, graph)], key=lambda r: r["extras_total"])
             if rows:
                 ax.plot([r["extras_total"] for r in rows], [r["test_accuracy"] for r in rows],
-                        marker="o", markersize=3, linewidth=1.2, label=family.replace("_", " "))
+                        marker="o", markersize=3, linewidth=1.2, color=color,
+                        label=family.replace("_", " "))
+            baseline = [r for r in records if (r["family"], r["version"], r["protocol"], r["metodo"])
+                        == (family, version, protocol, "no-graph")]
+            if baseline:
+                has_baseline = True
+                ax.axhline(baseline[0]["test_accuracy"], color=color, linestyle="--", linewidth=.9, alpha=.65,
+                           label="_nolegend_" if rows else family.replace("_", " ") + " (sem grafo)")
         way, shot, query = PROTOCOLS[protocol]
         graph_label = "RBO (p=0,9)" if graph == "complete-rbo" else f"RBF euclidiano (sigma={args.rbf_sigma:g})"
         ax.set_title(f"{version.title()} | {way}-way, {shot}-shot, {query}-query | {graph_label}")
         ax.set_xlabel("Imagens extras por episodio (treino, validacao e teste)")
         ax.set_ylabel("Acuracia de teste (%)")
         ax.set_ylim(0, 100)
+        ax.set_xlim(0, 100 if version == "micro" else 200)
         ax.grid(alpha=.25)
         if ax.lines:
-            ax.legend(loc="center left", bbox_to_anchor=(1, .5), fontsize=8)
+            handles, labels = ax.get_legend_handles_labels()
+            if has_baseline:
+                handles.append(Line2D([], [], color="gray", linestyle="--"))
+                labels.append("Sem grafo (mesma cor por base)")
+            ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, .5), fontsize=8)
         fig.text(.08, .018, "ResNet-18 congelada | Projecao 512 para 256 treinada | Seed " + str(args.seed), fontsize=9)
         fig.tight_layout(rect=(0, .04, 1, 1))
         fig.savefig(folder / f"{version}_{protocol}_{graph}.png", dpi=160)
