@@ -60,6 +60,10 @@ class CompleteGraphTests(unittest.TestCase):
             torch.testing.assert_close(ax,bx[:10])
             self.assertFalse(set(large.last_extra_ids)&set(a.sample_ids))
             self.assertEqual(len(set(large.last_extra_ids)),100)
+            episode_classes = {c for c,_ in a.sample_ids}
+            self.assertTrue(all(c in episode_classes for c,_ in small.last_extra_ids))
+            self.assertTrue(all(c in episode_classes for c,_ in large.last_extra_ids[:20]))
+            self.assertTrue(all(c not in episode_classes for c,_ in large.last_extra_ids[20:]))
             self.assertTrue(set(c for c,_ in large.last_extra_ids)-set(c for c,_ in a.sample_ids))
         self.assertEqual(small.metadata()["episode_ids_sha256"],large.metadata()["episode_ids_sha256"])
         with self.assertRaises(ValueError):

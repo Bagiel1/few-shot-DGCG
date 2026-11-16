@@ -37,15 +37,23 @@ LayerNorm e L2 depois da projecao seguem o pipeline do projeto.
 ## Sorteio e particionamento
 
 Extras entram em treino, validacao e teste. Cada fase usa somente suas
-proprias classes. O sorteio e uniforme entre imagens da particao, sem
-reposicao e sem consultar rotulos para balancear o contexto.
-Pode incluir classes fora das n-way do episodio.
+proprias classes. O sorteio prioriza imagens das classes representadas
+pelos suportes do episodio. Quando essas imagens se esgotam, completa
+com imagens de outras classes da mesma particao. Dentro de cada grupo,
+o sorteio e uniforme entre imagens, sem reposicao e sem cotas por classe.
+O avaliador usa as categorias do dataset para formar os dois grupos.
+O modelo recebe apenas os vetores das imagens extras.
 
 Suporte e queries sao amostrados primeiro. Seus identificadores ficam
 excluidos do pool de extras. Um RNG separado, definido pela seed da fase
-e pelas identidades do episodio, permuta o restante. Quantidades maiores
-usam prefixos da mesma permutacao. Assim, suporte e queries sao iguais
+e pelas identidades do episodio, permuta o restante. Essa ordem e dividida
+em imagens das classes do episodio primeiro e imagens de outras classes
+depois. Quantidades maiores usam prefixos da mesma ordem. Assim, suporte e queries sao iguais
 entre os dois grafos e entre quantidades de extras.
+
+Exemplo Micro com 40 imagens por classe, 2-way/10-shot/10-query:
+sobram 40 imagens das duas classes do episodio. Ate 40 extras, todas sao
+dessas classes. Com 50 extras, sao 40 dessas classes e 10 de outras.
 
 Micro usa split de classes 10/5/5. Mini usa metade das classes para treino,
 um quarto para validacao e o restante para teste, com arredondamento para

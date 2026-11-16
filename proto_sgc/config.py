@@ -276,7 +276,8 @@ def _add_context_arguments(parser: argparse.ArgumentParser) -> None:
         help=(
             "reserved usa o banco separado antigo; queries separa as extras das "
             "queries sorteadas no mesmo episodio mestre; split-pool sorteia de "
-            "toda a particao, excluindo suporte e queries, sem balancear classes."
+            "as classes do episodio primeiro e completa com outras da particao, "
+            "excluindo suporte e queries."
         ),
     )
 

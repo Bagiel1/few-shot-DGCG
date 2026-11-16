@@ -11,7 +11,7 @@ from .episodes import Episode, FeatureEpisodeSampler
 
 
 class SplitPoolBank:
-    """Extras aninhadas de toda a particao, sem repetir suporte ou queries.
+    """Extras aninhadas, priorizando as classes do episodio.
 
     O RNG do episodio nao e consumido para escolher extras. A permutacao do
     pool depende da seed da fase e das identidades das imagens avaliadas.
@@ -46,7 +46,12 @@ class SplitPoolBank:
         order = np.random.default_rng(seed).permutation(len(self.ids))
         available = np.ones(len(self.ids), dtype=bool)
         available[list(excluded)] = False
-        selected = order[available[order]][:self.count].tolist()
+        support_ids = episode.sample_ids[:len(episode.support_x)]
+        episode_classes = {label for label, _ in support_ids}
+        preferred = np.array([label in episode_classes for label, _ in self.ids])
+        same_classes = order[(available & preferred)[order]]
+        other_classes = order[(available & ~preferred)[order]]
+        selected = np.concatenate((same_classes, other_classes))[:self.count].tolist()
         self.last_extra_ids = tuple(self.ids[i] for i in selected)
         return self.features[torch.tensor(selected, dtype=torch.long)]
 
@@ -55,7 +60,7 @@ class SplitPoolBank:
                 "classes": self.classes, "pool_size": len(self.ids),
                 "episodes_sampled": self.episodes_sampled,
                 "episode_ids_sha256": self.episode_digest.hexdigest(),
-                "sampling": "uniform_images_without_replacement; excludes_support_and_query; nested_prefix"}
+                "sampling": "episode_classes_first; other_split_classes_only_if_needed; without_replacement; nested_prefix"}
 
 
 class ExtraReferenceBank:

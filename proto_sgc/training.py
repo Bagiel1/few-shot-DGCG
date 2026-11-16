@@ -337,7 +337,8 @@ def train_model(
             )
         elif args.extra_source == "split-pool":
             print(f"Extras de toda a particao: {args.extra_images}; fases={args.extra_phases}. "
-                  "Sorteio sem reposicao, excluindo suporte e queries; sem balanceamento por classe.")
+                  "Prioriza classes do episodio, completa com outras classes quando necessario. "
+                  "Sorteio sem reposicao, excluindo suporte e queries.")
         else:
             print(f"Extras: modo={extra_mode}; fases={','.join(args.extra_phases)}; "
                   f"totais efetivos por episodio="
@@ -520,7 +521,7 @@ def train_model(
             "requested_total": args.extra_images,
             "banks": {p: b.metadata() for p, b in context_banks.items()},
             "labels_exposed_to_model": False, "pseudo_labels": False,
-            "sampling": ("all_split_classes_uniform_images_without_replacement"
+            "sampling": ("episode_classes_first; other_split_classes_only_if_needed; without_replacement"
                          if args.extra_source == "split-pool"
                          else "same_episode_classes_balanced; labels_used_only_by_sampler"),
             "supervision_and_metrics": "query_only; prototypes_from_support_only",
